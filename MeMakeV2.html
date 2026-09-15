@@ -1,0 +1,2716 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="day">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MeMake — build a little you</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2b2145;
+    --paper:#ece5fa;
+    --panel:#ffffff;
+    --tile:#fbf9ff;
+    --field:#faf7ff;
+    --dotc:#cfc2ee;
+    --soft:#cfc2ee;
+    --check1:#ffffff;
+    --check2:#e4dcf5;
+    --mint:#3fd6a4;
+    --sun:#ffc93c;
+    --coral:#ff6b8a;
+    --radius:20px;
+  }
+  html[data-theme="night"]{
+    --ink:#efe9ff;
+    --paper:#171230;
+    --panel:#241d42;
+    --tile:#2e2552;
+    --field:#2e2552;
+    --dotc:#2b2350;
+    --soft:#4a3d7d;
+    --check1:#3a3168;
+    --check2:#2f2757;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family:"Fredoka","Trebuchet MS","Segoe UI",system-ui,sans-serif;
+    color:var(--ink);
+    background-color:var(--paper);
+    background-image:radial-gradient(var(--dotc) 1.6px, transparent 1.6px);
+    background-size:22px 22px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 18px 60px}
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+  .mark{
+    display:inline-block;background:var(--ink);color:var(--paper);
+    padding:9px 20px 11px;border-radius:16px;transform:rotate(-2deg);
+    box-shadow:5px 5px 0 var(--mint);
+    font-size:30px;font-weight:700;letter-spacing:-.5px;line-height:1;
+  }
+  .mark span{color:var(--sun)}
+  .tagline{margin:8px 0 0 6px;font-size:15px;font-weight:400;opacity:.75;max-width:46ch}
+  .top-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+  /* ---------- buttons ---------- */
+  button{font:inherit;color:inherit;cursor:pointer}
+  .btn{
+    border:3px solid var(--ink);background:var(--panel);
+    border-radius:999px;padding:10px 18px;font-weight:600;font-size:15px;
+    box-shadow:0 4px 0 var(--ink);transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--ink)}
+  .btn-sun{background:var(--sun);color:#2b2145}
+  .btn-mint{background:var(--mint);color:#2b2145}
+  .btn-coral{background:var(--coral);color:#2b2145}
+  .btn-sm{padding:7px 13px;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+  .btn-ico{padding:7px 11px;font-size:15px;line-height:1.2;min-width:40px}
+  .btn[disabled]{opacity:.35;cursor:default;transform:none}
+  .btn:focus-visible,.tile:focus-visible,.chip:focus-visible,.sw:focus-visible,
+  .seg button:focus-visible,input:focus-visible,.pill:focus-visible,.card:focus-visible{
+    outline:3px solid var(--mint);outline-offset:3px
+  }
+
+  /* ---------- layout ---------- */
+  .board{display:grid;grid-template-columns:minmax(300px,410px) 1fr;gap:20px;align-items:start}
+  .panel{
+    background:var(--panel);border:3px solid var(--ink);border-radius:var(--radius);
+    box-shadow:7px 7px 0 var(--ink);padding:16px;
+  }
+  .stage-panel{position:sticky;top:16px}
+
+  /* ---------- stage ---------- */
+  .stage{
+    position:relative;border:3px solid var(--ink);border-radius:14px;overflow:hidden;
+    background-color:var(--check1);
+    background-image:
+      linear-gradient(45deg,var(--check2) 25%,transparent 25%,transparent 75%,var(--check2) 75%),
+      linear-gradient(45deg,var(--check2) 25%,transparent 25%,transparent 75%,var(--check2) 75%);
+    background-size:26px 26px;background-position:0 0,13px 13px;
+    cursor:pointer;
+  }
+  .stage svg{display:block;width:100%;height:auto}
+  .stage.boop{animation:boop .5s ease}
+  @keyframes boop{
+    0%{transform:scale(1)}
+    30%{transform:scale(1.04,.95) rotate(-1.5deg)}
+    60%{transform:scale(.98,1.03) rotate(1deg)}
+    100%{transform:scale(1)}
+  }
+  .stage.anim .mm-bob{animation:bob 3.6s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+  .stage.anim .mm-eyes{transform-box:fill-box;transform-origin:center;animation:blink 5.4s infinite}
+  @keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.06)}}
+  .spark{position:absolute;pointer-events:none;font-size:22px;animation:spark .9s ease-out forwards}
+  @keyframes spark{
+    0%{transform:translate(-50%,-50%) scale(.4);opacity:1}
+    100%{transform:translate(-50%,-220%) scale(1.3);opacity:0}
+  }
+
+  .name-row{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+  .name-row input[type=text]{
+    flex:1 1 150px;min-width:0;border:3px solid var(--ink);border-radius:12px;padding:8px 12px;
+    font:inherit;font-size:15px;font-weight:600;background:var(--field);color:var(--ink);
+  }
+  .check{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:500;cursor:pointer}
+  .check input{width:18px;height:18px;accent-color:var(--mint);cursor:pointer}
+
+  .save-row{display:flex;gap:9px;margin-top:12px;flex-wrap:wrap}
+  .save-row .btn{flex:1 1 auto}
+
+  .opt-grid{display:grid;gap:9px;margin-top:13px;padding-top:12px;border-top:3px dashed var(--soft)}
+  .opt{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;flex-wrap:wrap}
+  .opt > span{min-width:66px}
+  .seg{display:inline-flex;border:3px solid var(--ink);border-radius:999px;overflow:hidden}
+  .seg button{border:0;background:var(--panel);color:var(--ink);padding:6px 12px;font-size:14px;font-weight:600}
+  .seg button + button{border-left:3px solid var(--ink)}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
+
+  .code-row{display:flex;gap:7px;margin-top:13px;padding-top:12px;border-top:3px dashed var(--soft);flex-wrap:wrap}
+  .code-row input{
+    flex:1 1 140px;min-width:0;border:3px solid var(--ink);border-radius:12px;padding:8px 12px;
+    font:inherit;font-size:13px;background:var(--field);color:var(--ink);
+  }
+  .hint{margin:10px 2px 0;font-size:13px;opacity:.7;line-height:1.45}
+
+  /* ---------- pickers ---------- */
+  .quick{display:grid;gap:9px;padding-bottom:12px;margin-bottom:12px;border-bottom:3px dashed var(--soft)}
+  .qrow{display:flex;align-items:center;gap:9px}
+  .qlab{font-size:13px;font-weight:600;min-width:52px;opacity:.75}
+  .pills{display:flex;gap:7px;overflow-x:auto;padding:3px 1px 5px;scrollbar-width:thin}
+  .pill{
+    flex:0 0 auto;border:3px solid var(--ink);background:var(--tile);border-radius:999px;
+    padding:5px 12px;font-size:13px;font-weight:600;white-space:nowrap;
+  }
+  .pill:active{transform:translateY(2px)}
+
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:11px}
+  .chip{
+    border:3px solid var(--ink);background:var(--tile);border-radius:999px;
+    padding:6px 13px;font-size:14px;font-weight:600;position:relative;
+  }
+  .chip[aria-selected="true"]{background:var(--ink);color:var(--panel)}
+  .chip .lk{font-size:11px;margin-left:4px}
+
+  .tool-row{display:flex;gap:7px;align-items:center;margin-bottom:11px;flex-wrap:wrap}
+  .tool-row input[type=text]{
+    flex:1 1 120px;min-width:0;border:3px solid var(--ink);border-radius:12px;padding:7px 12px;
+    font:inherit;font-size:14px;background:var(--field);color:var(--ink);
+  }
+  .count{font-size:13px;opacity:.6;font-weight:500;white-space:nowrap}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:10px}
+  .tile{
+    border:3px solid var(--ink);background:var(--tile);border-radius:14px;padding:0;overflow:hidden;
+    display:block;transition:transform .08s ease;position:relative;
+  }
+  .tile svg{display:block;width:100%;height:auto;background:#fff}
+  .tile .cap{display:block;padding:4px 2px 5px;font-size:12px;font-weight:500;line-height:1.1}
+  .tile[aria-pressed="true"]{background:var(--mint);transform:translateY(-3px);box-shadow:0 4px 0 var(--ink)}
+  .tile[aria-pressed="true"] .cap{color:#2b2145}
+  .tile.fav::after{content:"★";position:absolute;top:3px;right:5px;font-size:12px;color:var(--sun);text-shadow:0 0 2px #2b2145}
+
+  .colors{margin-top:15px;padding-top:13px;border-top:3px dashed var(--soft);display:grid;gap:11px}
+  .crow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .crow > .lab{font-size:14px;font-weight:600;min-width:74px}
+  .sw{width:28px;height:28px;border-radius:50%;border:3px solid var(--ink);padding:0}
+  .sw[aria-pressed="true"]{box-shadow:0 0 0 3px var(--panel),0 0 0 6px var(--mint)}
+  input[type=color]{
+    width:38px;height:30px;padding:0;border:3px solid var(--ink);border-radius:9px;background:none;cursor:pointer
+  }
+  .empty{font-size:14px;opacity:.7;padding:2px;margin:0}
+  .pal-row{margin-top:13px;padding-top:12px;border-top:3px dashed var(--soft);display:flex;align-items:center;gap:9px}
+
+  /* ---------- shelf ---------- */
+  .shelf{margin-top:20px}
+  .shelf-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .shelf-head h2{margin:0;font-size:20px;font-weight:700}
+  .shelf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:12px}
+  .card{
+    border:3px solid var(--ink);background:var(--tile);border-radius:14px;overflow:hidden;padding:0;
+    display:block;text-align:left;position:relative;
+  }
+  .card svg{display:block;width:100%;height:auto;background:#fff;border-bottom:3px solid var(--ink)}
+  .card .nm{display:block;padding:6px 8px;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .card .x{
+    position:absolute;top:5px;right:5px;border:3px solid var(--ink);background:var(--coral);color:#2b2145;
+    border-radius:50%;width:26px;height:26px;font-size:13px;font-weight:700;line-height:1;padding:0;
+  }
+  .shelf-empty{font-size:14px;opacity:.7;margin:0;padding:6px 2px}
+
+  /* ---------- toasts + modal ---------- */
+  .toasts{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);display:grid;gap:8px;z-index:50;pointer-events:none}
+  .toast{
+    border:3px solid var(--ink);background:var(--sun);color:#2b2145;border-radius:999px;
+    padding:9px 18px;font-size:14px;font-weight:600;box-shadow:0 4px 0 var(--ink);
+    animation:rise .25s ease;max-width:90vw;text-align:center;
+  }
+  .toast.bad{background:var(--coral)}
+  @keyframes rise{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+
+  .veil{position:fixed;inset:0;background:rgba(20,12,44,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:60}
+  .veil[hidden]{display:none}
+  .sheet{background:var(--panel);border:3px solid var(--ink);border-radius:var(--radius);box-shadow:7px 7px 0 var(--ink);
+    padding:20px;max-width:460px;width:100%;max-height:84vh;overflow:auto}
+  .sheet h2{margin:0 0 12px;font-size:22px}
+  .keys{display:grid;gap:7px;margin:0;font-size:14px}
+  .keys div{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+  kbd{
+    border:2px solid var(--ink);border-radius:7px;padding:1px 7px;font:inherit;font-size:13px;font-weight:600;
+    background:var(--tile);box-shadow:0 2px 0 var(--ink);white-space:nowrap;
+  }
+  .sound-wrap{display:flex;align-items:center;gap:6px}
+  input[type=range]{width:74px;accent-color:var(--mint);cursor:pointer}
+
+  footer{margin-top:24px;text-align:center;font-size:13px;opacity:.65;line-height:1.6}
+
+  @media (max-width:900px){
+    .board{grid-template-columns:1fr}
+    .stage-panel{position:static}
+    .mark{font-size:26px}
+    .tiles{grid-template-columns:repeat(auto-fill,minmax(76px,1fr))}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important;animation:none !important}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="mark">Me<span>Make</span></div>
+      <p class="tagline">Pick your parts, build a little you, save it as a picture. Press <kbd>?</kbd> for shortcuts.</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn btn-coral" id="randomBtn">Surprise me</button>
+      <button class="btn btn-ico" id="undoBtn" title="Undo (Ctrl+Z)" aria-label="Undo">&#8634;</button>
+      <button class="btn btn-ico" id="redoBtn" title="Redo (Ctrl+Y)" aria-label="Redo">&#8635;</button>
+      <button class="btn btn-sm" id="resetBtn">Start over</button>
+      <span class="sound-wrap">
+        <button class="btn btn-ico" id="soundBtn" title="Sound on or off (M)" aria-label="Sound">&#128266;</button>
+        <input type="range" id="vol" min="0" max="100" value="55" aria-label="Volume">
+      </span>
+      <button class="btn btn-ico" id="themeBtn" title="Day or night (N)" aria-label="Day or night">&#127769;</button>
+      <button class="btn btn-ico" id="helpBtn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+    </div>
+  </header>
+
+  <div class="board">
+    <section class="panel stage-panel" aria-label="Your character">
+      <div class="stage anim" id="stage" title="Click for a boop"></div>
+
+      <div class="name-row">
+        <input type="text" id="nameInput" maxlength="22" placeholder="Name your character" aria-label="Character name">
+        <label class="check"><input type="checkbox" id="nameOnPic"> Put it on the picture</label>
+      </div>
+
+      <div class="save-row">
+        <button class="btn btn-mint" id="pngBtn">Save PNG</button>
+        <button class="btn btn-sun" id="svgBtn">Save SVG</button>
+        <button class="btn btn-sm" id="clipBtn">Copy image</button>
+        <button class="btn btn-sm" id="shelfAddBtn">Add to shelf</button>
+      </div>
+
+      <div class="opt-grid">
+        <div class="opt">
+          <span>Size</span>
+          <div class="seg" id="sizeSeg" role="group" aria-label="Picture size">
+            <button type="button" data-size="256">256</button>
+            <button type="button" data-size="512">512</button>
+            <button type="button" data-size="1024" aria-pressed="true">1024</button>
+            <button type="button" data-size="2048">2048</button>
+          </div>
+        </div>
+        <div class="opt">
+          <span>Shape</span>
+          <div class="seg" id="shapeSeg" role="group" aria-label="Picture shape">
+            <button type="button" data-shape="square" aria-pressed="true">Square</button>
+            <button type="button" data-shape="circle">Circle</button>
+            <button type="button" data-shape="sticker">Sticker</button>
+          </div>
+        </div>
+        <div class="opt">
+          <span>Framing</span>
+          <div class="seg" id="zoomSeg" role="group" aria-label="Framing">
+            <button type="button" data-zoom="full" aria-pressed="true">Full</button>
+            <button type="button" data-zoom="close">Close up</button>
+          </div>
+          <label class="check"><input type="checkbox" id="transBg"> See-through</label>
+        </div>
+      </div>
+
+      <div class="code-row">
+        <input type="text" id="codeInput" spellcheck="false" aria-label="Character code">
+        <button class="btn btn-sm" id="copyBtn">Copy</button>
+        <button class="btn btn-sm" id="loadBtn">Load</button>
+        <button class="btn btn-sm" id="linkBtn" title="Copy a link that opens this character">Link</button>
+      </div>
+      <p class="hint" id="hint">The code holds every choice you made. Copy it to keep a character, paste one in and hit Load to bring it back.</p>
+    </section>
+
+    <section class="panel" aria-label="Parts">
+      <div class="quick">
+        <div class="qrow"><span class="qlab">Looks</span><div class="pills" id="looks"></div></div>
+        <div class="qrow"><span class="qlab">Mood</span><div class="pills" id="moods"></div></div>
+      </div>
+
+      <div class="chips" id="chips" role="tablist" aria-label="Part categories"></div>
+
+      <div class="tool-row">
+        <input type="text" id="search" placeholder="Search parts" aria-label="Search parts in this category">
+        <span class="count" id="count"></span>
+        <button class="btn btn-sm btn-ico" id="prevBtn" title="Previous part (left arrow)" aria-label="Previous part">&#8249;</button>
+        <button class="btn btn-sm btn-ico" id="nextBtn" title="Next part (right arrow)" aria-label="Next part">&#8250;</button>
+        <button class="btn btn-sm btn-ico" id="diceBtn" title="Random part in this category" aria-label="Random part">&#127922;</button>
+        <button class="btn btn-sm btn-ico" id="lockBtn" title="Lock this category against Surprise me" aria-label="Lock category">&#128275;</button>
+      </div>
+
+      <div class="tiles" id="tiles"></div>
+      <div class="colors" id="colors"></div>
+      <div class="pal-row"><span class="qlab">Palettes</span><div class="pills" id="palettes"></div></div>
+    </section>
+  </div>
+
+  <section class="panel shelf" aria-label="Saved characters">
+    <div class="shelf-head">
+      <h2>Shelf</h2>
+      <div class="top-actions">
+        <button class="btn btn-sm" id="shelfExport">Export file</button>
+        <button class="btn btn-sm" id="shelfImport">Import file</button>
+        <input type="file" id="shelfFile" accept="application/json,.json" hidden>
+      </div>
+    </div>
+    <div class="shelf-grid" id="shelfGrid"></div>
+    <p class="shelf-empty" id="shelfEmpty">Nothing here yet. Build someone you like and hit <strong>Add to shelf</strong>.</p>
+  </section>
+
+  <footer>
+    Everything here is drawn in this one file. No internet needed once it's saved.<br>
+    <span id="storeNote"></span>
+  </footer>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<div class="veil" id="helpVeil" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+    <h2>Keyboard shortcuts</h2>
+    <div class="keys">
+      <div><span>Previous / next part</span><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd></span></div>
+      <div><span>Previous / next category</span><span><kbd>&uarr;</kbd> <kbd>&darr;</kbd></span></div>
+      <div><span>Jump to a category</span><span><kbd>1</kbd>&hellip;<kbd>9</kbd> <kbd>0</kbd></span></div>
+      <div><span>Surprise me</span><span><kbd>R</kbd></span></div>
+      <div><span>Shuffle colours only</span><span><kbd>Shift</kbd>+<kbd>R</kbd></span></div>
+      <div><span>Random part, this category</span><span><kbd>D</kbd></span></div>
+      <div><span>Lock this category</span><span><kbd>L</kbd></span></div>
+      <div><span>Undo / redo</span><span><kbd>Ctrl</kbd>+<kbd>Z</kbd> <kbd>Ctrl</kbd>+<kbd>Y</kbd></span></div>
+      <div><span>Save a PNG</span><span><kbd>S</kbd></span></div>
+      <div><span>Add to shelf</span><span><kbd>A</kbd></span></div>
+      <div><span>Search parts</span><span><kbd>/</kbd></span></div>
+      <div><span>Sound on or off</span><span><kbd>M</kbd></span></div>
+      <div><span>Day or night</span><span><kbd>N</kbd></span></div>
+      <div><span>Close this</span><span><kbd>Esc</kbd></span></div>
+    </div>
+    <div class="save-row"><button class="btn btn-mint" id="helpClose">Got it</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* =====================================================================
+   MeMake — every piece of art below is hand-drawn SVG, built as strings.
+   Canvas is 400x400. Head centre is (200,175), eyes sit at x=163 / x=237.
+   Shoulders start at y=296. Hats live above y=130.
+   ===================================================================== */
+
+var LINE = "#2b2145";
+
+function clamp(n,a,b){ return n<a?a:(n>b?b:n); }
+function hex2rgb(h){
+  h = String(h).replace("#","");
+  if(h.length===3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+}
+function rgb2hex(r,g,b){
+  return "#"+[r,g,b].map(function(v){
+    var s = clamp(Math.round(v),0,255).toString(16); return s.length<2?"0"+s:s;
+  }).join("");
+}
+/* amt > 0 lightens, amt < 0 darkens */
+function shade(hex,amt){
+  var c = hex2rgb(hex);
+  var t = amt<0 ? 0 : 255, p = Math.abs(amt);
+  return rgb2hex(c[0]+(t-c[0])*p, c[1]+(t-c[1])*p, c[2]+(t-c[2])*p);
+}
+/* blend two colours, t=0 gives a, t=1 gives b */
+function mix(a,b,t){
+  var x = hex2rgb(a), y = hex2rgb(b);
+  return rgb2hex(x[0]+(y[0]-x[0])*t, x[1]+(y[1]-x[1])*t, x[2]+(y[2]-x[2])*t);
+}
+/* rough brightness 0..1, used to keep contrast readable */
+function lum(hex){
+  var c = hex2rgb(hex);
+  return (c[0]*0.299 + c[1]*0.587 + c[2]*0.114)/255;
+}
+function mirror(s){ return '<g transform="translate(400,0) scale(-1,1)">'+s+'</g>'; }
+function both(s){ return s + mirror(s); }
+/* same shape on both eyes without flipping it — for things like a $ sign */
+function twin(s){ return s + '<g transform="translate(74,0)">'+s+'</g>'; }
+
+/* small shape shorthands — every art function below leans on these */
+function P(d,fill,w){
+  return '<path d="'+d+'" fill="'+fill+'" stroke="'+LINE+'" stroke-width="'+(w===undefined?5:w)+'" stroke-linejoin="round"/>';
+}
+function PF(d,fill){ return '<path d="'+d+'" fill="'+fill+'"/>'; }
+function PL(d,stroke,w,op){
+  return '<path d="'+d+'" fill="none" stroke="'+stroke+'" stroke-width="'+w+'" stroke-linecap="round" stroke-linejoin="round"'
+    + (op!==undefined?' opacity="'+op+'"':'') + '/>';
+}
+function C(cx,cy,r,fill,w){
+  return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+fill+'"'
+    + (w?' stroke="'+LINE+'" stroke-width="'+w+'"':'') + '/>';
+}
+function E(cx,cy,rx,ry,fill,w){
+  return '<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" fill="'+fill+'"'
+    + (w?' stroke="'+LINE+'" stroke-width="'+w+'"':'') + '/>';
+}
+function RT(x,y,w_,h,rx,fill,sw){
+  return '<rect x="'+x+'" y="'+y+'" width="'+w_+'" height="'+h+'" rx="'+rx+'" fill="'+fill+'"'
+    + (sw?' stroke="'+LINE+'" stroke-width="'+sw+'"':'') + '/>';
+}
+function dots(list,r,fill,op){
+  return list.map(function(p){
+    return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(p[2]||r)+'" fill="'+fill+'"'+(op?' opacity="'+op+'"':'')+'/>';
+  }).join("");
+}
+function star(cx,cy,r,fill,rot){
+  var pts=[], i, a, rr;
+  for(i=0;i<10;i++){
+    a = (Math.PI/5)*i - Math.PI/2 + (rot||0);
+    rr = i%2 ? r*0.45 : r;
+    pts.push((cx+Math.cos(a)*rr).toFixed(1)+","+(cy+Math.sin(a)*rr).toFixed(1));
+  }
+  return '<polygon points="'+pts.join(" ")+'" fill="'+fill+'"/>';
+}
+function heart(cx,cy,s,fill){
+  return '<path transform="translate('+cx+','+cy+') scale('+s+')" fill="'+fill+'" d="M0 9 C-9 2 -12 -3 -12 -7 C-12 -12 -8 -14 -5 -14 C-2 -14 0 -11 0 -9 C0 -11 2 -14 5 -14 C8 -14 12 -12 12 -7 C12 -3 9 2 0 9 Z"/>';
+}
+/* a tidy cloud puff used by a couple of backdrops */
+function puff(cx,cy,s,fill){
+  return '<g transform="translate('+cx+','+cy+') scale('+s+')">'
+    + C(0,0,26,fill) + C(-26,8,18,fill) + C(26,8,20,fill) + C(-8,-14,18,fill) + C(12,-12,16,fill)
+    + '<rect x="-30" y="0" width="60" height="14" fill="'+fill+'"/></g>';
+}
+
+/* ---------------------------------------------------------------
+   FACE SHAPES — hw = half width, used to place ears and earrings
+   --------------------------------------------------------------- */
+var FACES = {
+  round:  { name:"Round",  hw:88, path:'<ellipse cx="200" cy="176" rx="88" ry="92"/>' },
+  oval:   { name:"Oval",   hw:79, path:'<ellipse cx="200" cy="176" rx="79" ry="98"/>' },
+  square: { name:"Square", hw:84, path:'<rect x="116" y="86" width="168" height="184" rx="46"/>' },
+  heart:  { name:"Heart",  hw:86, path:'<path d="M200 274 C158 250 114 220 114 168 C114 118 150 84 200 84 C250 84 286 118 286 168 C286 220 242 250 200 274 Z"/>' },
+  long:   { name:"Long",   hw:74, path:'<ellipse cx="200" cy="176" rx="74" ry="104"/>' },
+  wide:   { name:"Wide",   hw:94, path:'<ellipse cx="200" cy="180" rx="94" ry="84"/>' },
+  bean:   { name:"Bean",   hw:86, path:'<path d="M114 160 C114 106 152 82 200 82 C248 82 286 106 286 160 C286 224 250 272 200 272 C150 272 114 224 114 160 Z"/>' },
+  pear:   { name:"Pear",   hw:90, path:'<path d="M124 152 C124 108 156 84 200 84 C244 84 276 108 276 152 C290 186 290 226 262 252 C238 274 162 274 138 252 C110 226 110 186 124 152 Z"/>' },
+  diamond:{ name:"Diamond",hw:86, path:'<path d="M200 78 C238 96 286 138 286 176 C286 214 238 260 200 276 C162 260 114 214 114 176 C114 138 162 96 200 78 Z"/>' },
+  chisel: { name:"Chisel", hw:83, path:'<path d="M117 146 C117 102 154 80 200 80 C246 80 283 102 283 146 C283 202 268 238 244 258 C228 271 172 271 156 258 C132 238 117 202 117 146 Z"/>' },
+  egg:    { name:"Egg",    hw:80, path:'<path d="M200 82 C246 82 280 124 280 172 C280 226 246 272 200 272 C154 272 120 226 120 172 C120 124 154 82 200 82 Z"/>' },
+  blob:   { name:"Blob",   hw:90, path:'<path d="M110 168 C110 116 146 80 198 80 C252 80 290 112 290 164 C290 200 282 232 258 254 C234 276 166 278 142 256 C120 236 110 204 110 168 Z"/>' }
+};
+function faceHW(c){ return (FACES[c.face]||FACES.round).hw; }
+
+function drawFace(c){
+  var f = FACES[c.face] || FACES.round;
+  var ear = '<ellipse cx="'+(200-f.hw+6)+'" cy="192" rx="17" ry="23" fill="'+c.skin+'" stroke="'+LINE+'" stroke-width="5"/>'
+          + '<ellipse cx="'+(200-f.hw+6)+'" cy="192" rx="7" ry="11" fill="'+shade(c.skin,-0.18)+'"/>';
+  var head = f.path.replace("<ellipse","<ellipse fill=\""+c.skin+"\" stroke=\""+LINE+"\" stroke-width=\"5\"")
+                   .replace("<rect","<rect fill=\""+c.skin+"\" stroke=\""+LINE+"\" stroke-width=\"5\"")
+                   .replace("<path","<path fill=\""+c.skin+"\" stroke=\""+LINE+"\" stroke-width=\"5\" stroke-linejoin=\"round\"");
+  return both(ear) + head;
+}
+function drawNeck(c){
+  return '<path d="M172 214 h56 v96 h-56 z" fill="'+shade(c.skin,-0.13)+'"/>'
+       + '<path d="M172 250 q28 22 56 0 v60 h-56 z" fill="'+c.skin+'"/>';
+}
+
+/* ---------------------------------------------------------------
+   BACKDROPS
+   --------------------------------------------------------------- */
+var BGS = {
+  none:   { name:"None",     draw:function(){ return ""; } },
+  plain:  { name:"Plain",    draw:function(c){ return '<rect width="400" height="400" fill="'+c.bg1+'"/>'; } },
+  fade:   { name:"Fade",     draw:function(c,u){
+    return '<defs><linearGradient id="'+u+'g" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0" stop-color="'+c.bg1+'"/><stop offset="1" stop-color="'+c.bg2+'"/></linearGradient></defs>'
+      +'<rect width="400" height="400" fill="url(#'+u+'g)"/>';
+  }},
+  diag:   { name:"Slant",    draw:function(c,u){
+    return '<defs><linearGradient id="'+u+'g" x1="0" y1="0" x2="1" y2="1">'
+      +'<stop offset="0" stop-color="'+c.bg1+'"/><stop offset="0.5" stop-color="'+mix(c.bg1,c.bg2,0.5)+'"/>'
+      +'<stop offset="1" stop-color="'+c.bg2+'"/></linearGradient></defs>'
+      +'<rect width="400" height="400" fill="url(#'+u+'g)"/>';
+  }},
+  rays:   { name:"Sunburst", draw:function(c){
+    var s = '<rect width="400" height="400" fill="'+c.bg1+'"/>', i;
+    for(i=0;i<12;i++){
+      s += '<path d="M200 200 L'+(200+Math.cos(i*Math.PI/6)*460).toFixed(0)+' '+(200+Math.sin(i*Math.PI/6)*460).toFixed(0)
+        +' L'+(200+Math.cos((i+0.5)*Math.PI/6)*460).toFixed(0)+' '+(200+Math.sin((i+0.5)*Math.PI/6)*460).toFixed(0)+' Z" fill="'+c.bg2+'"/>';
+    }
+    return s;
+  }},
+  stripes:{ name:"Stripes",  draw:function(c,u){
+    return '<defs><pattern id="'+u+'p" width="46" height="46" patternUnits="userSpaceOnUse" patternTransform="rotate(38)">'
+      +'<rect width="46" height="46" fill="'+c.bg1+'"/><rect width="23" height="46" fill="'+c.bg2+'"/></pattern></defs>'
+      +'<rect width="400" height="400" fill="url(#'+u+'p)"/>';
+  }},
+  dotsbg: { name:"Polka",    draw:function(c,u){
+    return '<defs><pattern id="'+u+'p" width="40" height="40" patternUnits="userSpaceOnUse">'
+      +'<rect width="40" height="40" fill="'+c.bg1+'"/><circle cx="20" cy="20" r="8" fill="'+c.bg2+'"/></pattern></defs>'
+      +'<rect width="400" height="400" fill="url(#'+u+'p)"/>';
+  }},
+  grid:   { name:"Grid",     draw:function(c,u){
+    return '<defs><pattern id="'+u+'p" width="40" height="40" patternUnits="userSpaceOnUse">'
+      +'<rect width="40" height="40" fill="'+c.bg1+'"/>'
+      +'<path d="M0 0 H40 M0 0 V40" stroke="'+c.bg2+'" stroke-width="4"/></pattern></defs>'
+      +'<rect width="400" height="400" fill="url(#'+u+'p)"/>';
+  }},
+  checks: { name:"Checks",   draw:function(c,u){
+    return '<defs><pattern id="'+u+'p" width="56" height="56" patternUnits="userSpaceOnUse">'
+      +'<rect width="56" height="56" fill="'+c.bg1+'"/>'
+      +'<rect width="28" height="28" fill="'+c.bg2+'"/><rect x="28" y="28" width="28" height="28" fill="'+c.bg2+'"/>'
+      +'</pattern></defs><rect width="400" height="400" fill="url(#'+u+'p)"/>';
+  }},
+  spot:   { name:"Spotlight",draw:function(c,u){
+    return '<defs><radialGradient id="'+u+'r"><stop offset="0.35" stop-color="'+c.bg2+'"/>'
+      +'<stop offset="1" stop-color="'+c.bg1+'"/></radialGradient></defs>'
+      +'<rect width="400" height="400" fill="url(#'+u+'r)"/>';
+  }},
+  rings:  { name:"Ripples",  draw:function(c){
+    var s = '<rect width="400" height="400" fill="'+c.bg1+'"/>', i;
+    for(i=7;i>=0;i--){
+      s += '<circle cx="200" cy="200" r="'+(40+i*38)+'" fill="none" stroke="'+c.bg2+'" stroke-width="14" opacity="'+(0.35+i*0.07).toFixed(2)+'"/>';
+    }
+    return s;
+  }},
+  confetti:{name:"Confetti", draw:function(c){
+    var s = '<rect width="400" height="400" fill="'+c.bg1+'"/>', i, x, y;
+    var seedPts = [[28,52],[92,26],[160,66],[240,30],[318,58],[366,120],[40,140],[352,208],[30,232],[372,296],[66,320],[150,364],[244,352],[330,356],[108,206],[300,140]];
+    for(i=0;i<seedPts.length;i++){
+      x = seedPts[i][0]; y = seedPts[i][1];
+      s += '<rect x="'+x+'" y="'+y+'" width="16" height="8" rx="4" fill="'+c.bg2+'" transform="rotate('+((i*47)%180-90)+' '+(x+8)+' '+(y+4)+')"/>';
+    }
+    return s;
+  }},
+  hearts: { name:"Hearts",   draw:function(c){
+    var s = '<rect width="400" height="400" fill="'+c.bg1+'"/>', r, k;
+    for(r=0;r<5;r++) for(k=0;k<5;k++) s += heart(40+k*80+(r%2?34:0), 44+r*80, 1.05, c.bg2);
+    return s;
+  }},
+  bokeh:  { name:"Bokeh",    draw:function(c){
+    var s = '<rect width="400" height="400" fill="'+c.bg1+'"/>';
+    var pts = [[54,66,34,.5],[132,30,20,.35],[330,74,44,.45],[368,182,26,.3],[44,196,28,.35],
+               [30,330,40,.4],[140,352,22,.3],[286,340,34,.45],[360,292,18,.3],[214,52,16,.3]], i;
+    for(i=0;i<pts.length;i++) s += '<circle cx="'+pts[i][0]+'" cy="'+pts[i][1]+'" r="'+pts[i][2]+'" fill="'+c.bg2+'" opacity="'+pts[i][3]+'"/>';
+    return s;
+  }},
+  waves:  { name:"Waves",    draw:function(c){
+    var s = '<rect width="400" height="400" fill="'+c.bg1+'"/>', i, y;
+    for(i=0;i<6;i++){
+      y = 90 + i*56;
+      s += '<path d="M-20 '+y+' q40 -22 80 0 q40 22 80 0 q40 -22 80 0 q40 22 80 0 q40 -22 80 0" fill="none" stroke="'+c.bg2+'" stroke-width="9" stroke-linecap="round" opacity="0.75"/>';
+    }
+    return s;
+  }},
+  clouds: { name:"Sky",      draw:function(c,u){
+    return '<defs><linearGradient id="'+u+'g" x1="0" y1="0" x2="0" y2="1">'
+      +'<stop offset="0" stop-color="'+c.bg1+'"/><stop offset="1" stop-color="'+mix(c.bg1,"#ffffff",0.45)+'"/></linearGradient></defs>'
+      +'<rect width="400" height="400" fill="url(#'+u+'g)"/>'
+      + puff(72,84,0.9,c.bg2) + puff(318,58,0.7,c.bg2) + puff(348,246,1.0,c.bg2) + puff(48,290,0.8,c.bg2);
+  }},
+  night:  { name:"Night",    draw:function(c){
+    var s = '<rect width="400" height="400" fill="'+c.bg1+'"/>';
+    var st = [[36,58],[96,30],[168,74],[248,40],[318,96],[372,56],[28,164],[370,196],[46,252],[356,318],[92,342],[206,26],[296,166],[130,150]], i;
+    for(i=0;i<st.length;i++) s += star(st[i][0], st[i][1], (i%3)?5:8, c.bg2);
+    s += dots([[62,124],[212,110],[330,238],[150,296],[268,320],[390,140]],2.6,c.bg2,0.9);
+    s += '<g><circle cx="322" cy="82" r="34" fill="'+c.bg2+'"/><circle cx="306" cy="70" r="30" fill="'+c.bg1+'"/></g>';
+    return s;
+  }},
+  rainbow:{ name:"Rainbow",  draw:function(c){
+    var s = '<rect width="400" height="400" fill="'+c.bg1+'"/>', i, n = 6;
+    for(i=0;i<n;i++){
+      s += '<circle cx="200" cy="396" r="'+(380-i*40)+'" fill="none" stroke="'+mix(c.bg2,c.bg1,i/n)+'" stroke-width="40"/>';
+    }
+    return s;
+  }},
+  window: { name:"Window",   draw:function(c){
+    return '<rect width="400" height="400" fill="'+c.bg1+'"/>'
+      +'<circle cx="200" cy="186" r="140" fill="'+c.bg2+'"/>'
+      +'<circle cx="200" cy="186" r="140" fill="none" stroke="'+LINE+'" stroke-width="7"/>';
+  }},
+  tape:   { name:"Framed",   draw:function(c){
+    return '<rect width="400" height="400" fill="'+c.bg1+'"/>'
+      +'<rect x="16" y="16" width="368" height="368" rx="26" fill="none" stroke="'+c.bg2+'" stroke-width="14"/>'
+      +'<rect x="16" y="16" width="368" height="368" rx="26" fill="none" stroke="'+LINE+'" stroke-width="4"/>';
+  }}
+};
+
+/* ---------------------------------------------------------------
+   EYES
+   --------------------------------------------------------------- */
+function eyeBall(rx,ry,pr,dx,dy,c){
+  var s = '<ellipse cx="163" cy="174" rx="'+rx+'" ry="'+ry+'" fill="#fff" stroke="'+LINE+'" stroke-width="4.5"/>'
+        + '<circle cx="'+(163+(dx||0))+'" cy="'+(176+(dy||0))+'" r="'+pr+'" fill="'+c.eye+'"/>'
+        + '<circle cx="'+(159+(dx||0))+'" cy="'+(171+(dy||0))+'" r="'+(pr*0.34)+'" fill="#fff"/>';
+  return s;
+}
+var EYES = {
+  dot:    { name:"Dots",    draw:function(c){ return both('<circle cx="163" cy="176" r="11" fill="'+c.eye+'"/>'); } },
+  round:  { name:"Round",   draw:function(c){ return both(eyeBall(15,17,8,0,0,c)); } },
+  wide:   { name:"Wide",    draw:function(c){ return both(eyeBall(18,21,7,0,1,c)); } },
+  small:  { name:"Beady",   draw:function(c){ return both(eyeBall(11,12,5.5,0,0,c)); } },
+  happy:  { name:"Happy",   draw:function(c){ return both('<path d="M148 180 q15 -21 30 0" fill="none" stroke="'+c.eye+'" stroke-width="7" stroke-linecap="round"/>'); } },
+  closed: { name:"Closed",  draw:function(c){ return both('<path d="M148 172 q15 18 30 0" fill="none" stroke="'+c.eye+'" stroke-width="7" stroke-linecap="round"/>'); } },
+  wink:   { name:"Wink",    draw:function(c){
+    return '<path d="M148 180 q15 -21 30 0" fill="none" stroke="'+c.eye+'" stroke-width="7" stroke-linecap="round"/>' + mirror(eyeBall(15,17,8,0,0,c));
+  }},
+  side:   { name:"Side eye",draw:function(c){ return both(eyeBall(15,17,7.5,5,0,c)); } },
+  up:     { name:"Dreamy",  draw:function(c){ return both(eyeBall(15,17,7.5,0,-6,c)); } },
+  sleepy: { name:"Sleepy",  draw:function(c){
+    return both(eyeBall(15,17,8,0,3,c) + '<path d="M147 172 q16 -7 32 0 v-10 h-32 z" fill="'+c.skin+'"/><path d="M147 172 q16 -7 32 0" fill="none" stroke="'+LINE+'" stroke-width="5" stroke-linecap="round"/>');
+  }},
+  bored:  { name:"Over it", draw:function(c){
+    return both(eyeBall(15,17,8,0,2,c)
+      + '<path d="M147 176 h32 v-22 h-32 z" fill="'+c.skin+'"/>'
+      + '<path d="M146 176 h34" fill="none" stroke="'+LINE+'" stroke-width="5" stroke-linecap="round"/>');
+  }},
+  squint: { name:"Squint",  draw:function(c){
+    return both('<path d="M147 176 q16 -9 32 0 q-16 9 -32 0 z" fill="#fff" stroke="'+LINE+'" stroke-width="4"/>'
+      + '<circle cx="163" cy="176" r="5.5" fill="'+c.eye+'"/>');
+  }},
+  angry:  { name:"Fierce",  draw:function(c){
+    return both(eyeBall(15,17,8,0,2,c) + '<path d="M146 158 L181 172 v-16 h-35 z" fill="'+c.skin+'"/><path d="M146 158 L181 172" fill="none" stroke="'+LINE+'" stroke-width="5.5" stroke-linecap="round"/>');
+  }},
+  shock:  { name:"Shocked", draw:function(c){
+    return both('<ellipse cx="163" cy="174" rx="17" ry="19" fill="#fff" stroke="'+LINE+'" stroke-width="4.5"/>'
+      + '<circle cx="163" cy="176" r="4" fill="'+c.eye+'"/>');
+  }},
+  anime:  { name:"Shiny",   draw:function(c){
+    return both('<ellipse cx="163" cy="173" rx="19" ry="23" fill="#fff" stroke="'+LINE+'" stroke-width="4.5"/>'
+      + '<ellipse cx="163" cy="175" rx="13" ry="17" fill="'+c.eye+'"/>'
+      + '<ellipse cx="163" cy="182" rx="11" ry="9" fill="'+shade(c.eye,0.5)+'"/>'
+      + '<circle cx="157" cy="166" r="6" fill="#fff"/><circle cx="170" cy="184" r="3.4" fill="#fff"/>');
+  }},
+  sparkle:{ name:"Sparkle", draw:function(c){
+    return both(eyeBall(16,18,8,0,0,c) + '<circle cx="169" cy="180" r="3" fill="#fff"/>' + star(176,163,6,"#fff"));
+  }},
+  heart:  { name:"Hearts",  draw:function(c){ return both(heart(163,172,1.25,c.eye)); } },
+  starry: { name:"Stars",   draw:function(c){ return both(star(163,175,16,c.eye)); } },
+  swirl:  { name:"Dizzy",   draw:function(c){
+    return both('<path d="M163 174 m0 -3 a3 3 0 1 1 -3 3 a6 6 0 1 0 6 -6 a9 9 0 1 0 -9 9 a12 12 0 1 0 12 -12" fill="none" stroke="'+c.eye+'" stroke-width="3.6" stroke-linecap="round"/>');
+  }},
+  xx:     { name:"Nope",    draw:function(c){
+    return both(PL("M151 163 L175 187 M175 163 L151 187", c.eye, 7));
+  }},
+  money:  { name:"Money",   draw:function(c){
+    return twin('<path d="M163 155 v40" stroke="'+c.eye+'" stroke-width="4.5" stroke-linecap="round" fill="none"/>'
+      + '<path d="M174 165 q-3 -8 -12 -7 q-11 1 -11 9 q0 8 11 8 q11 0 11 8 q0 8 -11 9 q-9 1 -13 -7" fill="none" stroke="'+c.eye+'" stroke-width="5" stroke-linecap="round"/>');
+  }},
+  robot:  { name:"Robot",   draw:function(c){
+    return both(RT(142,160,42,28,10,"#2b2145",4.5)
+      + RT(148,168,30,10,5,c.eye)
+      + '<circle cx="152" cy="173" r="2.6" fill="#fff"/>');
+  }},
+  pixel:  { name:"Pixels",  draw:function(c){
+    return both('<rect x="150" y="160" width="26" height="26" fill="'+c.eye+'"/>'
+      + '<rect x="150" y="160" width="9" height="9" fill="#fff"/>');
+  }},
+  cyclops:{ name:"Cyclops", draw:function(c){
+    return '<ellipse cx="200" cy="174" rx="38" ry="40" fill="#fff" stroke="'+LINE+'" stroke-width="5"/>'
+      + '<circle cx="200" cy="177" r="18" fill="'+c.eye+'"/>'
+      + '<circle cx="192" cy="168" r="7" fill="#fff"/>';
+  }},
+  cry:    { name:"Teary",   draw:function(c){
+    return both(eyeBall(15,17,8,0,2,c) + '<path d="M163 192 q-7 12 0 17 q7 -5 0 -17 z" fill="#6fc8ff" stroke="'+LINE+'" stroke-width="2.5"/>');
+  }}
+};
+
+/* ---------------------------------------------------------------
+   EYEBROWS
+   --------------------------------------------------------------- */
+var BROWS = {
+  none:    { name:"None",    draw:function(){ return ""; } },
+  straight:{ name:"Straight",draw:function(c){ return both('<rect x="142" y="136" width="44" height="10" rx="5" fill="'+c.hair+'"/>'); } },
+  thick:   { name:"Thick",   draw:function(c){ return both('<rect x="140" y="130" width="48" height="16" rx="8" fill="'+c.hair+'"/>'); } },
+  thin:    { name:"Thin",    draw:function(c){ return both('<rect x="144" y="138" width="40" height="6" rx="3" fill="'+c.hair+'"/>'); } },
+  stub:    { name:"Stubby",  draw:function(c){ return both('<rect x="151" y="133" width="30" height="13" rx="6.5" fill="'+c.hair+'"/>'); } },
+  raised:  { name:"Raised",  draw:function(c){ return both('<path d="M142 144 q22 -18 44 -4" fill="none" stroke="'+c.hair+'" stroke-width="11" stroke-linecap="round"/>'); } },
+  arch:    { name:"High arch",draw:function(c){ return both('<path d="M140 140 q23 -24 46 -2" fill="none" stroke="'+c.hair+'" stroke-width="7" stroke-linecap="round"/>'); } },
+  angry:   { name:"Angry",   draw:function(c){ return both('<path d="M142 130 L186 148" fill="none" stroke="'+c.hair+'" stroke-width="11" stroke-linecap="round"/>'); } },
+  worried: { name:"Worried", draw:function(c){ return both('<path d="M142 148 L186 132" fill="none" stroke="'+c.hair+'" stroke-width="11" stroke-linecap="round"/>'); } },
+  sharp:   { name:"Sharp",   draw:function(c){ return both('<path d="M140 150 L188 128 L188 140 L148 154 Z" fill="'+c.hair+'"/>'); } },
+  zig:     { name:"Zigzag",  draw:function(c){ return both('<path d="M141 148 l12 -14 l11 13 l11 -14 l11 13" fill="none" stroke="'+c.hair+'" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>'); } },
+  bushy:   { name:"Bushy",   draw:function(c){ return both('<path d="M138 146 q6 -18 26 -16 q22 2 24 12 q-16 -4 -28 0 q-12 4 -22 4 z" fill="'+c.hair+'"/>'); } },
+  fluff:   { name:"Fluffy",  draw:function(c){
+    return both('<path d="M137 148 q-2 -12 10 -12 q6 -10 16 -4 q8 -8 16 -1 q12 -1 12 11 q-14 -6 -26 -2 q-14 5 -28 8 z" fill="'+c.hair+'"/>');
+  }},
+  curved:  { name:"Curved",  draw:function(c){ return both('<path d="M141 142 q24 -14 45 2" fill="none" stroke="'+c.hair+'" stroke-width="8" stroke-linecap="round"/>'); } },
+  uni:     { name:"Unibrow", draw:function(c){ return '<path d="M142 140 q58 -20 116 0 q-58 -8 -116 0 z" fill="'+c.hair+'"/><rect x="142" y="134" width="116" height="11" rx="6" fill="'+c.hair+'"/>'; } }
+};
+
+/* ---------------------------------------------------------------
+   NOSES
+   --------------------------------------------------------------- */
+var NOSES = {
+  none:   { name:"None",   draw:function(){ return ""; } },
+  dot:    { name:"Dot",    draw:function(c){ return '<circle cx="200" cy="202" r="6.5" fill="'+shade(c.skin,-0.25)+'"/>'; } },
+  button: { name:"Button", draw:function(c){ return '<ellipse cx="200" cy="202" rx="12" ry="9" fill="'+shade(c.skin,-0.16)+'"/>'; } },
+  bulb:   { name:"Bulb",   draw:function(c){
+    return '<ellipse cx="200" cy="200" rx="16" ry="14" fill="'+shade(c.skin,-0.12)+'" stroke="'+LINE+'" stroke-width="3.5"/>'
+      + '<ellipse cx="194" cy="195" rx="5" ry="4" fill="'+shade(c.skin,0.35)+'"/>';
+  }},
+  curve:  { name:"Curve",  draw:function(c){ return '<path d="M193 182 q-9 21 8 23" fill="none" stroke="'+shade(c.skin,-0.32)+'" stroke-width="5" stroke-linecap="round"/>'; } },
+  line:   { name:"Line",   draw:function(c){ return PL("M200 180 v20 q0 5 6 5", shade(c.skin,-0.3), 4.5); } },
+  point:  { name:"Point",  draw:function(c){ return '<path d="M200 176 L212 206 h-24 z" fill="'+shade(c.skin,-0.14)+'"/>'; } },
+  hook:   { name:"Hook",   draw:function(c){
+    return '<path d="M196 176 q10 16 12 28 q1 10 -12 10 q-8 0 -10 -6" fill="none" stroke="'+shade(c.skin,-0.3)+'" stroke-width="5" stroke-linecap="round"/>';
+  }},
+  upturn: { name:"Upturned",draw:function(c){
+    return '<path d="M198 178 q-10 18 -4 24 q6 6 14 0" fill="none" stroke="'+shade(c.skin,-0.28)+'" stroke-width="5" stroke-linecap="round"/>'
+      + dots([[192,200],[206,200]],3,shade(c.skin,-0.36));
+  }},
+  wide:   { name:"Wide",   draw:function(c){ return '<path d="M184 196 q16 14 32 0" fill="none" stroke="'+shade(c.skin,-0.3)+'" stroke-width="5.5" stroke-linecap="round"/><circle cx="186" cy="198" r="4" fill="'+shade(c.skin,-0.3)+'"/><circle cx="214" cy="198" r="4" fill="'+shade(c.skin,-0.3)+'"/>'; } },
+  snout:  { name:"Snout",  draw:function(c){ return '<ellipse cx="200" cy="203" rx="20" ry="14" fill="'+shade(c.skin,-0.12)+'" stroke="'+LINE+'" stroke-width="4"/><circle cx="193" cy="203" r="3.5" fill="'+LINE+'"/><circle cx="207" cy="203" r="3.5" fill="'+LINE+'"/>'; } },
+  cat:    { name:"Kitty",  draw:function(c){ return '<path d="M191 196 h18 l-9 10 z" fill="#f08aa0" stroke="'+LINE+'" stroke-width="3" stroke-linejoin="round"/>'; } }
+};
+
+/* ---------------------------------------------------------------
+   MOUTHS
+   --------------------------------------------------------------- */
+var MOUTHS = {
+  smile:  { name:"Smile",   draw:function(){ return '<path d="M172 222 q28 30 56 0" fill="none" stroke="'+LINE+'" stroke-width="7" stroke-linecap="round"/>'; } },
+  dimple: { name:"Dimples", draw:function(c){
+    return '<path d="M174 222 q26 28 52 0" fill="none" stroke="'+LINE+'" stroke-width="7" stroke-linecap="round"/>'
+      + both(PL("M166 214 q-6 10 -1 19", shade(c.skin,-0.3), 4, 0.85));
+  }},
+  grin:   { name:"Grin",    draw:function(c,u){
+    var p = "M168 218 q32 42 64 0 z";
+    return '<defs><clipPath id="'+u+'m"><path d="'+p+'"/></clipPath></defs>'
+      +'<path d="'+p+'" fill="#48253a" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'
+      +'<g clip-path="url(#'+u+'m)"><rect x="166" y="214" width="68" height="11" fill="#fff"/></g>';
+  }},
+  braces: { name:"Braces",  draw:function(c,u){
+    var p = "M168 218 q32 42 64 0 z";
+    return '<defs><clipPath id="'+u+'m"><path d="'+p+'"/></clipPath></defs>'
+      +'<path d="'+p+'" fill="#48253a" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'
+      +'<g clip-path="url(#'+u+'m)"><rect x="166" y="214" width="68" height="13" fill="#fff"/>'
+      +'<rect x="166" y="219" width="68" height="4" fill="#9aa7bd"/>'
+      + dots([[176,221],[188,221],[200,221],[212,221],[224,221]],3.2,"#c9d4e6") + '</g>';
+  }},
+  laugh:  { name:"Laugh",   draw:function(c,u){
+    var p = "M160 214 q40 58 80 0 z";
+    return '<defs><clipPath id="'+u+'m"><path d="'+p+'"/></clipPath></defs>'
+      +'<path d="'+p+'" fill="#48253a" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      +'<g clip-path="url(#'+u+'m)"><rect x="158" y="210" width="84" height="12" fill="#fff"/>'
+      +'<ellipse cx="200" cy="256" rx="22" ry="16" fill="#f27b93"/></g>';
+  }},
+  open:   { name:"Open",    draw:function(c,u){
+    return '<ellipse cx="200" cy="232" rx="22" ry="23" fill="#48253a" stroke="'+LINE+'" stroke-width="4"/>'
+      +'<ellipse cx="200" cy="250" rx="13" ry="10" fill="#f27b93"/>';
+  }},
+  gasp:   { name:"Gasp",    draw:function(){
+    return '<ellipse cx="200" cy="234" rx="15" ry="22" fill="#48253a" stroke="'+LINE+'" stroke-width="4"/>'
+      + '<ellipse cx="200" cy="248" rx="8" ry="7" fill="#f27b93"/>';
+  }},
+  flat:   { name:"Flat",    draw:function(){ return '<path d="M178 230 h44" fill="none" stroke="'+LINE+'" stroke-width="7" stroke-linecap="round"/>'; } },
+  frown:  { name:"Frown",   draw:function(){ return '<path d="M174 238 q26 -26 52 0" fill="none" stroke="'+LINE+'" stroke-width="7" stroke-linecap="round"/>'; } },
+  zig:    { name:"Nervous", draw:function(){ return '<path d="M174 228 l11 10 l11 -10 l11 10 l11 -10" fill="none" stroke="'+LINE+'" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'; } },
+  smirk:  { name:"Smirk",   draw:function(){ return '<path d="M176 230 q26 16 46 -10" fill="none" stroke="'+LINE+'" stroke-width="7" stroke-linecap="round"/>'; } },
+  oh:     { name:"Oh",      draw:function(){ return '<ellipse cx="200" cy="230" rx="13" ry="16" fill="#48253a" stroke="'+LINE+'" stroke-width="4"/>'; } },
+  whistle:{ name:"Whistle", draw:function(){
+    return '<ellipse cx="192" cy="230" rx="11" ry="12" fill="#48253a" stroke="'+LINE+'" stroke-width="4"/>'
+      + '<path d="M216 226 q12 -8 20 -2 M220 238 q12 -4 18 -12" fill="none" stroke="'+LINE+'" stroke-width="3.5" stroke-linecap="round" opacity="0.6"/>';
+  }},
+  kiss:   { name:"Kiss",    draw:function(){
+    return '<path d="M186 230 q10 -12 20 -2 q10 -10 8 6 q-2 14 -14 14 q-16 0 -14 -18 z" fill="#d9537a" stroke="'+LINE+'" stroke-width="3.5" stroke-linejoin="round"/>';
+  }},
+  tongue: { name:"Tongue",  draw:function(){
+    return '<path d="M172 222 q28 30 56 0" fill="none" stroke="'+LINE+'" stroke-width="7" stroke-linecap="round"/>'
+      +'<path d="M190 238 q10 18 22 4 q-4 -10 -22 -4 z" fill="#f27b93" stroke="'+LINE+'" stroke-width="3.5" stroke-linejoin="round"/>';
+  }},
+  cat:    { name:"Kitty",   draw:function(){ return '<path d="M180 224 q10 14 20 0 q10 14 20 0" fill="none" stroke="'+LINE+'" stroke-width="6" stroke-linecap="round"/>'; } },
+  lips:   { name:"Lips",    draw:function(){
+    return '<path d="M176 228 q10 -12 24 -3 q14 -9 24 3 q-12 20 -24 20 q-12 0 -24 -20 z" fill="#d9537a" stroke="'+LINE+'" stroke-width="3.5" stroke-linejoin="round"/>'
+      +'<path d="M176 228 q24 8 48 0" fill="none" stroke="'+LINE+'" stroke-width="3"/>';
+  }},
+  fangs:  { name:"Fangs",   draw:function(){
+    return '<path d="M172 222 q28 30 56 0" fill="none" stroke="'+LINE+'" stroke-width="7" stroke-linecap="round"/>'
+      +'<path d="M182 228 l5 12 l5 -9 z" fill="#fff" stroke="'+LINE+'" stroke-width="2.5" stroke-linejoin="round"/>'
+      +'<path d="M208 239 l5 -12 l5 9 z" fill="#fff" stroke="'+LINE+'" stroke-width="2.5" stroke-linejoin="round"/>';
+  }},
+  buck:   { name:"Buck teeth",draw:function(){
+    return '<path d="M174 220 q26 26 52 0" fill="none" stroke="'+LINE+'" stroke-width="6" stroke-linecap="round"/>'
+      + RT(188,226,24,20,4,"#ffffff",3.5)
+      + '<path d="M200 227 v18" stroke="'+LINE+'" stroke-width="2.5"/>';
+  }},
+  wobble: { name:"Wobble",  draw:function(){ return '<path d="M176 232 q8 -12 16 0 q8 12 16 0 q8 -12 16 0" fill="none" stroke="'+LINE+'" stroke-width="6" stroke-linecap="round"/>'; } },
+  tooth:  { name:"One tooth",draw:function(c,u){
+    var p = "M170 220 q30 36 60 0 z";
+    return '<path d="'+p+'" fill="#48253a" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'
+      +'<rect x="192" y="220" width="16" height="13" rx="3" fill="#fff"/>';
+  }}
+};
+
+/* ---------------------------------------------------------------
+   HAIR — back layer sits behind the head, front layer over it
+   --------------------------------------------------------------- */
+function cap(fill,d){ return '<path d="'+d+'" fill="'+fill+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'; }
+var CAP_SHORT = "M112 178 C106 104 150 68 200 68 C250 68 294 104 288 178 C284 140 262 122 200 122 C138 122 116 140 112 178 Z";
+
+var HAIRS = {
+  bald:    { name:"Bald",    front:function(c){ return '<path d="M150 106 q26 -18 54 -6" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round" opacity="0.35"/>'; } },
+  buzz:    { name:"Buzz",    front:function(c){ return cap(c.hair,"M114 172 C110 106 152 70 200 70 C248 70 290 106 286 172 C280 132 252 112 200 112 C148 112 120 132 114 172 Z"); } },
+  short:   { name:"Short",   front:function(c){ return cap(c.hair,CAP_SHORT); } },
+  side:    { name:"Side part",front:function(c){
+    return cap(c.hair,"M112 178 C106 104 150 68 200 68 C250 68 294 104 288 178 C284 140 264 124 234 124 C214 124 196 136 168 142 C146 146 122 152 112 178 Z");
+  }},
+  swoop:   { name:"Swoop",   front:function(c){
+    return cap(c.hair,"M110 176 C102 100 150 66 202 66 C256 66 292 102 288 168 C276 128 248 118 214 130 C184 140 178 108 150 118 C128 126 116 148 110 176 Z");
+  }},
+  spiky:   { name:"Spiky",   front:function(c){
+    return cap(c.hair,"M112 178 L128 96 L146 112 L164 70 L182 104 L200 58 L218 104 L236 70 L254 112 L272 96 L288 178 C284 146 254 128 200 128 C146 128 116 146 112 178 Z");
+  }},
+  messy:   { name:"Messy",   front:function(c){
+    return cap(c.hair,"M110 176 C104 128 118 74 152 78 C160 58 190 56 198 74 C214 52 246 62 246 82 C280 70 296 120 290 176 C284 140 262 122 200 122 C138 122 116 140 110 176 Z")
+      + PL("M150 96 q16 -14 34 -8 M226 92 q14 -10 28 -2", shade(c.hair,0.3), 5, 0.55);
+  }},
+  flat:    { name:"Flat top", front:function(c){
+    return cap(c.hair,"M114 176 C112 120 118 84 132 72 q68 -20 136 0 C282 84 288 120 286 176 C282 140 260 122 200 122 C140 122 118 140 114 176 Z");
+  }},
+  bowl:    { name:"Bowl cut",front:function(c){
+    return cap(c.hair,"M110 138 q-4 -76 90 -76 q94 0 90 76 q-90 -6 -180 0 z");
+  }},
+  under:   { name:"Undercut",front:function(c){
+    return both('<path d="M113 178 C110 150 120 126 146 112 C134 136 128 156 130 178 Z" fill="'+shade(c.hair,-0.45)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>')
+      + cap(c.hair,"M114 134 C108 78 152 56 200 56 C250 56 294 80 288 134 C274 112 242 100 200 100 C158 100 128 112 114 134 Z");
+  }},
+  faux:    { name:"Fauxhawk",front:function(c){
+    return cap(shade(c.hair,-0.25),"M116 172 C112 118 152 88 200 88 C248 88 288 118 284 172 C278 142 254 126 200 126 C146 126 122 142 116 172 Z")
+      + cap(c.hair,"M168 124 C170 90 180 64 200 52 C220 64 230 90 232 124 q-32 -14 -64 0 z");
+  }},
+  curly:   { name:"Curly",   front:function(c){
+    var pts = [[122,156,28],[148,114,30],[190,94,32],[234,100,30],[268,130,28],[286,166,26]], i;
+    var capD = "M116 170 C116 116 152 96 200 96 C248 96 284 116 284 170 C276 138 250 124 200 124 C150 124 124 138 116 170 Z";
+    var s = '<path d="'+capD+'" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="9" stroke-linejoin="round"/>';
+    for(i=0;i<pts.length;i++) s += '<circle cx="'+pts[i][0]+'" cy="'+pts[i][1]+'" r="'+pts[i][2]+'" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="9"/>';
+    s += '<path d="'+capD+'" fill="'+c.hair+'"/>';
+    for(i=0;i<pts.length;i++) s += '<circle cx="'+pts[i][0]+'" cy="'+pts[i][1]+'" r="'+pts[i][2]+'" fill="'+c.hair+'"/>';
+    return s;
+  }},
+  afro:    { name:"Afro",
+    back:function(c){ return '<circle cx="200" cy="140" r="116" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5"/>'; },
+    front:function(c){ return '<path d="M118 128 C140 96 178 82 200 82 C222 82 260 96 282 128 C258 110 226 102 200 102 C174 102 142 110 118 128 Z" fill="'+shade(c.hair,0.14)+'"/>'; }
+  },
+  long:    { name:"Long",
+    back:function(c){ return '<path d="M104 330 C96 240 96 140 200 82 C304 140 304 240 296 330 C270 344 262 300 258 240 C252 176 232 152 200 150 C168 152 148 176 142 240 C138 300 130 344 104 330 Z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'; },
+    front:function(c){ return cap(c.hair,CAP_SHORT); }
+  },
+  bob:     { name:"Bob",
+    back:function(c){ return '<path d="M110 252 C102 170 116 84 200 78 C284 84 298 170 290 252 C282 268 258 268 250 252 C258 190 240 150 200 150 C160 150 142 190 150 252 C142 268 118 268 110 252 Z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'; },
+    front:function(c){ return cap(c.hair,"M112 172 C108 102 150 66 200 66 C250 66 292 102 288 172 C282 134 266 124 200 128 C150 130 120 136 112 172 Z"); }
+  },
+  wavy:    { name:"Wavy",
+    back:function(c){ return '<path d="M104 320 q-6 -128 26 -186 q24 -44 70 -52 q46 8 70 52 q32 58 26 186 q-18 22 -32 -6 q10 -80 -8 -130 q-16 -44 -56 -46 q-40 2 -56 46 q-18 50 -8 130 q-14 28 -32 6 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'; },
+    front:function(c){ return cap(c.hair,CAP_SHORT); }
+  },
+  shag:    { name:"Shag",
+    back:function(c){
+      return '<path d="M108 300 q-8 -134 30 -186 q26 -36 62 -36 q36 0 62 36 q38 52 30 186 l-22 -34 l-14 26 q-10 -78 -20 -118 q-14 -46 -36 -46 q-22 0 -36 46 q-10 40 -20 118 l-14 -26 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+    },
+    front:function(c){ return cap(c.hair,"M110 172 C104 102 150 64 200 64 C250 64 296 102 290 172 C276 140 258 136 232 146 C214 152 186 152 168 146 C142 136 124 140 110 172 Z"); }
+  },
+  hime:    { name:"Hime",
+    back:function(c){ return '<path d="M106 326 C98 232 100 132 200 76 C300 132 302 232 294 326 C272 336 262 300 258 236 C252 172 232 150 200 148 C168 150 148 172 142 236 C138 300 128 336 106 326 Z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'; },
+    front:function(c){
+      return cap(c.hair,"M110 150 q-2 -86 90 -86 q92 0 90 86 q-90 -10 -180 0 z")
+        + both('<path d="M112 148 q18 -6 26 4 q8 54 2 100 q-16 8 -28 -2 q-6 -52 0 -102 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>');
+    }
+  },
+  pony:    { name:"Ponytail",
+    back:function(c){ return '<path d="M282 120 c46 10 62 62 52 118 c-8 44 -30 66 -54 60 c26 -34 30 -74 20 -110 c-8 -30 -20 -50 -18 -68 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'; },
+    front:function(c){ return cap(c.hair,CAP_SHORT) + '<circle cx="276" cy="124" r="15" fill="'+shade(c.hair,-0.25)+'" stroke="'+LINE+'" stroke-width="4"/>'; }
+  },
+  pigtail: { name:"Pigtails",
+    back:function(c){ return both('<circle cx="104" cy="164" r="40" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5"/>'); },
+    front:function(c){ return cap(c.hair,CAP_SHORT); }
+  },
+  bun:     { name:"Top bun",
+    back:function(c){ return '<circle cx="200" cy="52" r="34" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5"/>'; },
+    front:function(c){ return cap(c.hair,"M112 176 C106 100 150 66 200 66 C250 66 294 100 288 176 C284 136 262 120 200 120 C138 120 116 136 112 176 Z"); }
+  },
+  halfup:  { name:"Half up",
+    back:function(c){
+      return '<path d="M112 300 C104 214 108 130 200 80 C292 130 296 214 288 300 C266 310 258 272 254 224 C248 168 230 150 200 148 C170 150 152 168 146 224 C142 272 134 310 112 300 Z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+        + '<circle cx="200" cy="46" r="28" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5"/>';
+    },
+    front:function(c){ return cap(c.hair,CAP_SHORT) + '<path d="M170 74 q30 -14 60 0" fill="none" stroke="'+shade(c.hair,-0.3)+'" stroke-width="7" stroke-linecap="round"/>'; }
+  },
+  mohawk:  { name:"Mohawk",  front:function(c){
+    return '<path d="M172 128 C176 82 186 50 200 28 C214 50 224 82 228 128 C218 118 182 118 172 128 Z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      +'<path d="M130 132 q70 -30 140 0 q-70 -12 -140 0 z" fill="'+c.hair+'" opacity="0.45"/>';
+  }},
+  bangs:   { name:"Bangs",
+    back:function(c){ return '<path d="M114 240 C106 156 120 80 200 76 C280 80 294 156 286 240 C276 256 258 254 252 238 C260 176 244 140 200 140 C156 140 140 176 148 238 C142 254 124 256 114 240 Z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'; },
+    front:function(c){ return cap(c.hair,"M110 166 C108 96 148 64 200 64 C252 64 292 96 290 166 C272 142 250 138 226 148 C204 156 176 158 148 148 C130 142 118 150 110 166 Z"); }
+  },
+  braids:  { name:"Braids",
+    back:function(c){ return both('<path d="M126 122 c-34 12 -46 76 -38 128 c4 22 30 22 34 0 c8 -50 14 -96 4 -128 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M88 190 h36 M86 218 h36 M88 246 h34" stroke="'+LINE+'" stroke-width="3.5" opacity="0.45"/>'); },
+    front:function(c){ return cap(c.hair,CAP_SHORT); }
+  },
+  dread:   { name:"Locs",
+    back:function(c){
+      var s = "", i, x, len;
+      for(i=0;i<9;i++){
+        x = 108 + i*23;
+        len = 250 + ((i%3)*22) - Math.abs(i-4)*10;
+        s += '<rect x="'+(x-10)+'" y="120" width="20" height="'+len+'" rx="10" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4"/>';
+        s += '<path d="M'+(x-9)+' 180 h18 M'+(x-9)+' 222 h18 M'+(x-9)+' 264 h18" stroke="'+LINE+'" stroke-width="3" opacity="0.4"/>';
+      }
+      return s;
+    },
+    front:function(c){ return cap(c.hair,"M110 164 C106 98 150 64 200 64 C250 64 294 98 290 164 C284 128 260 114 200 114 C140 114 116 128 110 164 Z"); }
+  },
+  corn:    { name:"Cornrows",
+    back:function(c){ return both('<path d="M132 118 q-18 44 -14 96 q2 20 18 16 q10 -56 12 -108 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4"/>'); },
+    front:function(c){
+      var s = cap(shade(c.hair,-0.38), CAP_SHORT), i, x, cx, ex;
+      for(i=0;i<6;i++){
+        x = 144 + i*23;
+        cx = (x + (200-x)*0.15).toFixed(1);
+        ex = (200 + (x-200)*0.55).toFixed(1);
+        s += PL("M"+x+" 124 Q"+cx+" 98 "+ex+" 92", c.hair, 9);
+      }
+      return s;
+    }
+  },
+  horns:   { name:"Space buns",
+    back:function(c){ return both('<circle cx="136" cy="62" r="30" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="5"/>'); },
+    front:function(c){ return cap(c.hair,CAP_SHORT); }
+  }
+};
+
+/* ---------------------------------------------------------------
+   FACIAL HAIR — back sits under the mouth, front sits over it
+   --------------------------------------------------------------- */
+var BEARDS = {
+  none:     { name:"None" },
+  stubble:  { name:"Stubble", back:function(c){
+    var list = [], x, y;
+    for(y=214;y<=262;y+=11) for(x=150;x<=250;x+=11){
+      if(Math.abs(x-200) < 26 && y < 244) continue;
+      if(((x-200)*(x-200))/(58*58) + ((y-236)*(y-236))/(44*44) > 1) continue;
+      list.push([x + ((y/11)%2?5:0), y, 2.6]);
+    }
+    return dots(list,2.6,c.hair,0.65);
+  }},
+  moustache:{ name:"Moustache", front:function(c){
+    return '<path d="M166 212 q16 -14 34 -2 q18 -12 34 2 q-10 18 -34 8 q-24 10 -34 -8 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>';
+  }},
+  pencil:   { name:"Pencil", front:function(c){
+    return '<path d="M170 214 q30 -10 60 0 q-30 3 -60 0 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="2.5" stroke-linejoin="round"/>';
+  }},
+  handlebar:{ name:"Handlebar", front:function(c){
+    return '<path d="M200 208 q22 -14 40 -4 q16 10 4 20 q-6 -14 -22 -8 q-12 4 -22 6 q-10 -2 -22 -6 q-16 -6 -22 8 q-12 -10 4 -20 q18 -10 40 4 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>';
+  }},
+  walrus:   { name:"Walrus", front:function(c){
+    return '<path d="M160 206 q40 -16 80 0 q6 26 -10 36 q-14 8 -22 -8 q-4 -8 -8 -8 q-4 0 -8 8 q-8 16 -22 8 q-16 -10 -10 -36 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>';
+  }},
+  goatee:   { name:"Goatee",
+    back:function(c){ return '<path d="M180 234 q20 -8 40 0 q6 30 -20 40 q-26 -10 -20 -40 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'; },
+    front:function(c){ return '<path d="M168 210 q16 -12 32 -2 q16 -10 32 2 q-10 16 -32 7 q-22 9 -32 -7 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'; }
+  },
+  vandyke:  { name:"Van Dyke",
+    back:function(c){ return '<path d="M182 238 q18 -6 36 0 q2 22 -8 34 q-10 12 -20 0 q-10 -12 -8 -34 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'; },
+    front:function(c){ return '<path d="M172 210 q14 -10 28 -1 q14 -9 28 1 q-10 13 -28 6 q-18 7 -28 -6 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'; }
+  },
+  chinpuff: { name:"Chin puff", back:function(c){
+    return '<ellipse cx="200" cy="258" rx="18" ry="14" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4"/>';
+  }},
+  soul:     { name:"Soul patch", back:function(c){ return '<ellipse cx="200" cy="250" rx="10" ry="12" fill="'+c.hair+'"/>'; } },
+  chin:     { name:"Chinstrap", back:function(c){
+    return '<path d="M118 168 c0 72 38 112 82 112 c44 0 82 -40 82 -112 c0 44 -30 66 -82 66 c-52 0 -82 -22 -82 -66 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>';
+  }},
+  mutton:   { name:"Mutton chops", back:function(c){
+    return both('<path d="M124 148 q20 -8 26 6 q8 38 -4 68 q-16 12 -28 -6 q-8 -38 6 -68 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>');
+  }},
+  full:     { name:"Full beard",
+    back:function(c){ return '<path d="M116 156 c0 86 40 130 84 130 c44 0 84 -44 84 -130 c0 56 -18 66 -30 62 c-6 26 -24 34 -54 34 c-30 0 -48 -8 -54 -34 c-12 4 -30 -6 -30 -62 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'; },
+    front:function(c){ return '<path d="M166 208 q18 -14 34 -2 q16 -12 34 2 q-12 18 -34 8 q-22 10 -34 -8 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'; }
+  },
+  wizard:   { name:"Wizard",
+    back:function(c){ return '<path d="M120 160 c0 60 16 92 32 108 c-4 40 12 92 48 106 c36 -14 52 -66 48 -106 c16 -16 32 -48 32 -108 c0 56 -18 68 -32 64 c-6 26 -22 34 -48 34 c-26 0 -42 -8 -48 -34 c-14 4 -32 -8 -32 -64 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'; },
+    front:function(c){ return '<path d="M164 208 q20 -14 36 -2 q16 -12 36 2 q-14 18 -36 8 q-22 10 -36 -8 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'; }
+  },
+  sideburn: { name:"Sideburns", back:function(c){
+    return both('<path d="M118 140 q16 -4 20 8 q4 34 -6 54 q-18 -18 -14 -62 z" fill="'+c.hair+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>');
+  }}
+};
+
+/* ---------------------------------------------------------------
+   EYEWEAR
+   --------------------------------------------------------------- */
+var GLASSES = {
+  none:   { name:"None",     draw:function(){ return ""; } },
+  round:  { name:"Round",    draw:function(c){
+    return both('<circle cx="163" cy="174" r="27" fill="#ffffff" fill-opacity="0.22" stroke="'+c.glass+'" stroke-width="6"/>')
+      + '<path d="M190 172 h20 M136 168 l-24 -8" fill="none" stroke="'+c.glass+'" stroke-width="6" stroke-linecap="round"/>'
+      + '<path d="M264 168 l24 -8" fill="none" stroke="'+c.glass+'" stroke-width="6" stroke-linecap="round"/>';
+  }},
+  wire:   { name:"Wire",     draw:function(c){
+    return both('<circle cx="163" cy="174" r="25" fill="#ffffff" fill-opacity="0.18" stroke="'+c.glass+'" stroke-width="3"/>')
+      + '<path d="M188 172 q12 -8 24 0 M138 166 l-26 -8 M262 166 l26 -8" fill="none" stroke="'+c.glass+'" stroke-width="3" stroke-linecap="round"/>';
+  }},
+  square: { name:"Square",   draw:function(c){
+    return both('<rect x="134" y="152" width="58" height="44" rx="12" fill="#ffffff" fill-opacity="0.22" stroke="'+c.glass+'" stroke-width="6"/>')
+      + '<path d="M192 172 h16 M134 164 l-22 -6 M266 164 l22 -6" fill="none" stroke="'+c.glass+'" stroke-width="6" stroke-linecap="round"/>';
+  }},
+  tape:   { name:"Taped",    draw:function(c){
+    return both('<rect x="134" y="152" width="58" height="44" rx="6" fill="#ffffff" fill-opacity="0.22" stroke="'+c.glass+'" stroke-width="6"/>')
+      + '<path d="M192 172 h16 M134 164 l-22 -6 M266 164 l22 -6" fill="none" stroke="'+c.glass+'" stroke-width="6" stroke-linecap="round"/>'
+      + RT(193,160,14,26,3,"#f7f2e2",3);
+  }},
+  cateye: { name:"Cat eye",  draw:function(c){
+    return both('<path d="M132 166 q4 -22 34 -20 q28 2 30 22 q-4 22 -32 22 q-30 0 -32 -24 z" fill="#ffffff" fill-opacity="0.22" stroke="'+c.glass+'" stroke-width="6" stroke-linejoin="round"/>'
+      + '<path d="M132 166 q-14 -14 -24 -14" fill="none" stroke="'+c.glass+'" stroke-width="6" stroke-linecap="round"/>')
+      + '<path d="M196 172 h8" stroke="'+c.glass+'" stroke-width="6" stroke-linecap="round"/>';
+  }},
+  aviator:{ name:"Aviators", draw:function(c){
+    return both('<path d="M130 156 h62 q4 26 -12 38 q-18 12 -34 2 q-16 -10 -16 -40 z" fill="'+shade(c.glass,0.55)+'" fill-opacity="0.55" stroke="'+c.glass+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M136 166 l18 -6" stroke="#ffffff" stroke-width="5" opacity="0.55" stroke-linecap="round"/>')
+      + '<path d="M192 160 q8 6 16 0 M130 156 l-22 -6 M270 156 l22 -6" fill="none" stroke="'+c.glass+'" stroke-width="5" stroke-linecap="round"/>';
+  }},
+  sun:    { name:"Sunnies",  draw:function(c){
+    return both('<rect x="132" y="152" width="60" height="44" rx="14" fill="'+c.glass+'" stroke="'+LINE+'" stroke-width="4"/>'
+      + '<path d="M142 188 l30 -30" stroke="#fff" stroke-width="6" opacity="0.5" stroke-linecap="round"/>')
+      + '<path d="M192 168 h16" stroke="'+c.glass+'" stroke-width="8" stroke-linecap="round"/>';
+  }},
+  shutter:{ name:"Shutters", draw:function(c){
+    var s = both(RT(130,150,62,46,8,c.glass,4)), i;
+    for(i=0;i<4;i++){
+      s += both('<rect x="134" y="'+(157+i*10)+'" width="54" height="4" rx="2" fill="#ffffff" opacity="0.55"/>');
+    }
+    return s + '<path d="M192 166 h16" stroke="'+c.glass+'" stroke-width="9" stroke-linecap="round"/>';
+  }},
+  visor:  { name:"Visor",    draw:function(c){
+    return '<path d="M112 156 q88 -22 176 0 q4 34 -12 40 q-76 14 -152 0 q-16 -6 -12 -40 z" fill="'+c.glass+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M132 186 l24 -22 M164 188 l22 -22" stroke="#fff" stroke-width="5" opacity="0.45" stroke-linecap="round"/>';
+  }},
+  cyber:  { name:"Cyber bar",draw:function(c){
+    var glow = lum(c.glass) < 0.35 ? "#3fd6a4" : c.glass;
+    return '<path d="M108 158 q92 -16 184 0 v28 q-92 16 -184 0 z" fill="#1b1630" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M120 170 q80 -12 160 0" fill="none" stroke="'+glow+'" stroke-width="7" stroke-linecap="round"/>'
+      + '<circle cx="150" cy="171" r="5" fill="#ffffff" opacity="0.8"/>';
+  }},
+  half:   { name:"Readers",  draw:function(c){
+    return both('<path d="M134 170 h58 v10 q0 16 -29 16 q-29 0 -29 -16 z" fill="#ffffff" fill-opacity="0.25" stroke="'+c.glass+'" stroke-width="5"/>')
+      + '<path d="M192 172 h16 M134 170 l-22 -8 M266 170 l22 -8" fill="none" stroke="'+c.glass+'" stroke-width="5" stroke-linecap="round"/>';
+  }},
+  hearts: { name:"Hearts",   draw:function(c){
+    return both(heart(163,172,2.0,"#ffffff")) + both(heart(163,172,2.0,c.glass).replace('fill="'+c.glass+'"','fill="none" stroke="'+c.glass+'" stroke-width="4"'))
+      + '<path d="M188 168 h24" stroke="'+c.glass+'" stroke-width="6" stroke-linecap="round"/>';
+  }},
+  stars:  { name:"Stars",    draw:function(c){
+    return both(star(163,174,30,c.glass)) + both(star(163,174,22,"#ffffff"))
+      + '<path d="M190 174 h20" stroke="'+c.glass+'" stroke-width="6" stroke-linecap="round"/>';
+  }},
+  monocle:{ name:"Monocle",  draw:function(c){
+    return mirror('<circle cx="163" cy="174" r="27" fill="#ffffff" fill-opacity="0.25" stroke="'+c.glass+'" stroke-width="6"/>')
+      + '<path d="M264 196 q10 34 -16 46" fill="none" stroke="'+c.glass+'" stroke-width="4"/>';
+  }},
+  goggles:{ name:"Goggles",  draw:function(c){
+    return '<path d="M108 172 h184" stroke="'+c.glass+'" stroke-width="12"/>'
+      + both('<circle cx="163" cy="174" r="30" fill="#bfe9ff" stroke="'+c.glass+'" stroke-width="8"/>')
+      + both('<path d="M148 190 l22 -22" stroke="#fff" stroke-width="6" opacity="0.7" stroke-linecap="round"/>');
+  }},
+  ski:    { name:"Ski mask", draw:function(c){
+    return '<path d="M104 150 h192 q6 0 6 10 v26 q0 26 -30 26 h-144 q-30 0 -30 -26 v-26 q0 -10 6 -10 z" fill="'+c.glass+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M122 158 h156 q4 0 4 8 v18 q0 16 -20 16 h-124 q-20 0 -20 -16 v-18 q0 -8 4 -8 z" fill="#8fd8ff" stroke="'+LINE+'" stroke-width="4"/>'
+      + '<path d="M136 190 l26 -26 M172 192 l24 -26" stroke="#fff" stroke-width="6" opacity="0.6" stroke-linecap="round"/>'
+      + '<path d="M104 156 q-16 6 -14 24 M296 156 q16 6 14 24" fill="none" stroke="'+LINE+'" stroke-width="6"/>';
+  }},
+  vr:     { name:"Headset",  draw:function(c){
+    return '<path d="M108 148 h184 q8 0 8 10 v34 q0 12 -12 12 h-40 q-12 0 -20 -8 q-16 -12 -32 0 q-8 8 -20 8 h-40 q-12 0 -12 -12 v-34 q0 -10 8 -10 z" fill="'+c.glass+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M108 156 q-14 4 -12 20 M292 156 q14 4 12 20" fill="none" stroke="'+LINE+'" stroke-width="6"/>'
+      + '<circle cx="288" cy="162" r="5" fill="#65f0b5"/>';
+  }},
+  patch:  { name:"Eye patch",draw:function(c){
+    return '<path d="M110 146 q90 -18 180 12" fill="none" stroke="'+LINE+'" stroke-width="7"/>'
+      + '<rect x="134" y="150" width="58" height="48" rx="14" fill="'+LINE+'"/>';
+  }},
+  three_d:{ name:"3D specs", draw:function(c){
+    return '<rect x="132" y="152" width="60" height="44" rx="10" fill="#ff5b6e" stroke="'+LINE+'" stroke-width="5"/>'
+      + '<rect x="208" y="152" width="60" height="44" rx="10" fill="#4fc9ff" stroke="'+LINE+'" stroke-width="5"/>'
+      + '<path d="M192 168 h16" stroke="'+LINE+'" stroke-width="8" stroke-linecap="round"/>';
+  }}
+};
+
+/* ---------------------------------------------------------------
+   HATS & HEAD GEAR
+   --------------------------------------------------------------- */
+var HATS = {
+  none:    { name:"None",     draw:function(){ return ""; } },
+  cap:     { name:"Cap",      draw:function(c){
+    return '<path d="M290 96 q40 6 38 20 q-2 12 -38 10 z" fill="'+shade(c.hat,-0.16)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M116 100 q4 -66 84 -66 q80 0 84 66 q-84 12 -168 0 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<circle cx="200" cy="36" r="8" fill="'+shade(c.hat,-0.2)+'" stroke="'+LINE+'" stroke-width="4"/>';
+  }},
+  beanie:  { name:"Beanie",   draw:function(c){
+    return '<circle cx="200" cy="24" r="16" fill="'+shade(c.hat,0.25)+'" stroke="'+LINE+'" stroke-width="5"/>'
+      + '<path d="M118 94 q6 -62 82 -62 q76 0 82 62 q-82 12 -164 0 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M112 92 q88 16 176 0 q4 24 -4 26 q-84 14 -168 0 q-8 -2 -4 -26 z" fill="'+shade(c.hat,0.18)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+  }},
+  top:     { name:"Top hat",  draw:function(c){
+    return '<rect x="146" y="-4" width="108" height="92" rx="8" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5"/>'
+      + '<rect x="146" y="58" width="108" height="22" fill="'+shade(c.hat,0.4)+'" stroke="'+LINE+'" stroke-width="5"/>'
+      + '<ellipse cx="200" cy="90" rx="102" ry="18" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5"/>';
+  }},
+  crown:   { name:"Crown",    draw:function(c){
+    return '<path d="M128 96 L120 34 L158 62 L200 20 L242 62 L280 34 L272 96 Z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<rect x="126" y="86" width="148" height="18" rx="9" fill="'+shade(c.hat,-0.18)+'" stroke="'+LINE+'" stroke-width="5"/>'
+      + '<circle cx="200" cy="76" r="9" fill="#ff5b7f" stroke="'+LINE+'" stroke-width="3"/>';
+  }},
+  tiara:   { name:"Tiara",    draw:function(c){
+    return '<path d="M138 104 q62 -26 124 0 q-8 -34 -62 -34 q-54 0 -62 34 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M200 62 l10 20 h-20 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'
+      + C(200,58,8,"#7ee8ff",4) + C(166,82,6,"#ff8ab5",3.5) + C(234,82,6,"#ff8ab5",3.5);
+  }},
+  cowboy:  { name:"Cowboy",   draw:function(c){
+    return '<path d="M150 88 q-6 -56 50 -56 q56 0 50 56 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M84 96 q40 -22 116 -22 q76 0 116 22 q-40 26 -116 26 q-76 0 -116 -26 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M150 84 q50 10 100 0" fill="none" stroke="'+shade(c.hat,-0.3)+'" stroke-width="8"/>';
+  }},
+  sombrero:{ name:"Sombrero", draw:function(c){
+    return '<path d="M156 84 q-8 -62 44 -62 q52 0 44 62 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M58 100 q56 -26 142 -26 q86 0 142 26 q-30 30 -142 30 q-112 0 -142 -30 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M78 104 q60 20 122 20 q62 0 122 -20" fill="none" stroke="'+shade(c.hat,-0.3)+'" stroke-width="6" stroke-dasharray="12 10"/>'
+      + '<path d="M156 82 q44 12 88 0" fill="none" stroke="'+shade(c.hat,-0.3)+'" stroke-width="7"/>';
+  }},
+  party:   { name:"Party hat",draw:function(c){
+    return '<path d="M200 6 L252 100 h-104 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M186 42 h28 M172 72 h56" stroke="'+shade(c.hat,0.45)+'" stroke-width="8" stroke-linecap="round"/>'
+      + '<circle cx="200" cy="8" r="12" fill="'+shade(c.hat,0.35)+'" stroke="'+LINE+'" stroke-width="4"/>';
+  }},
+  wizard:  { name:"Wizard",   draw:function(c){
+    return '<path d="M200 -6 q34 44 62 100 q-62 16 -124 0 q28 -56 62 -100 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M104 100 q96 24 192 0 q-6 20 -22 24 q-74 16 -148 0 q-16 -4 -22 -24 z" fill="'+shade(c.hat,-0.12)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + star(200,60,13,"#ffd75e") + star(222,88,8,"#ffd75e");
+  }},
+  santa:   { name:"Santa",    draw:function(c){
+    return '<path d="M118 92 q10 -64 82 -64 q58 0 78 34 q18 32 -6 44 q-40 -18 -78 -18 q-42 0 -76 4 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M112 88 q88 16 176 -4 q6 26 -4 30 q-84 18 -168 2 q-10 -4 -4 -28 z" fill="#fdfbff" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + C(286,58,20,"#fdfbff",5);
+  }},
+  chef:    { name:"Chef",     draw:function(c){
+    return C(156,44,30,c.hat,5) + C(200,30,34,c.hat,5) + C(244,44,30,c.hat,5)
+      + '<path d="M128 52 h144 v34 q-72 16 -144 0 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M126 86 q74 18 148 0 q2 22 -6 24 q-68 16 -136 0 q-8 -2 -6 -24 z" fill="'+shade(c.hat,-0.1)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+  }},
+  grad:    { name:"Graduate", draw:function(c){
+    return '<path d="M132 86 q68 -22 136 0 q-4 26 -68 26 q-64 0 -68 -26 z" fill="'+shade(c.hat,-0.15)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M200 34 L312 74 L200 110 L88 74 Z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + PL("M300 78 q10 26 4 44", c.hat, 5) + C(304,126,9,"#ffd75e",4);
+  }},
+  hard:    { name:"Hard hat", draw:function(c){
+    return '<path d="M124 94 q0 -62 76 -62 q76 0 76 62 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M188 34 h24 v58 h-24 z" fill="'+shade(c.hat,0.3)+'"/>'
+      + '<path d="M98 96 q102 20 204 0 q0 18 -14 20 q-88 14 -176 0 q-14 -2 -14 -20 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+  }},
+  viking:  { name:"Viking",   draw:function(c){
+    return both('<path d="M126 76 q-48 4 -62 -40 q46 -12 68 14 q14 16 -6 26 z" fill="#f2ead6" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>')
+      + '<path d="M120 96 q0 -64 80 -64 q80 0 80 64 q-80 14 -160 0 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M114 94 q86 16 172 0 q2 16 -6 18 q-80 14 -160 0 q-8 -2 -6 -18 z" fill="'+shade(c.hat,-0.25)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<rect x="192" y="34" width="16" height="62" rx="4" fill="'+shade(c.hat,-0.25)+'" stroke="'+LINE+'" stroke-width="4"/>';
+  }},
+  pirate:  { name:"Pirate",   draw:function(c){
+    return '<path d="M96 104 q10 -40 46 -52 q58 -18 116 0 q36 12 46 52 q-52 18 -104 18 q-52 0 -104 -18 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M96 104 q104 26 208 0" fill="none" stroke="'+shade(c.hat,0.4)+'" stroke-width="6"/>'
+      + C(200,66,17,"#fdfbff",4)
+      + '<path d="M186 88 l28 -12 M186 76 l28 12" stroke="#fdfbff" stroke-width="6" stroke-linecap="round"/>'
+      + dots([[194,64],[206,64]],3.4,LINE);
+  }},
+  space:   { name:"Space",    draw:function(c){
+    return '<circle cx="200" cy="174" r="134" fill="#cfeeff" fill-opacity="0.16" stroke="'+LINE+'" stroke-width="6"/>'
+      + '<path d="M132 78 a134 134 0 0 0 -58 88" fill="none" stroke="#ffffff" stroke-width="13" opacity="0.7" stroke-linecap="round"/>'
+      + '<path d="M86 130 q114 -76 228 0 q-18 -56 -114 -56 q-96 0 -114 56 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + both(RT(74,148,26,50,11,c.hat,5));
+  }},
+  turban:  { name:"Turban",   draw:function(c){
+    return '<path d="M110 108 q-4 -76 90 -76 q94 0 90 76 q-90 20 -180 0 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + PL("M118 92 q80 -34 164 -8", shade(c.hat,-0.2), 7, 0.8)
+      + PL("M116 72 q84 -38 168 -4", shade(c.hat,-0.2), 7, 0.7)
+      + PL("M128 52 q72 -28 144 -2", shade(c.hat,-0.2), 6, 0.6)
+      + C(200,86,11,"#ffd75e",4);
+  }},
+  wreath:  { name:"Flowers",  draw:function(c){
+    var s = "", i, a, x, y;
+    for(i=0;i<9;i++){
+      a = Math.PI*(1.06 + i*0.11);
+      x = 200 + Math.cos(a)*96; y = 168 + Math.sin(a)*96;
+      s += C(x.toFixed(1), y.toFixed(1), (i%2?11:14), (i%2?shade(c.hat,0.35):c.hat), 4);
+      s += C(x.toFixed(1), y.toFixed(1), 4, "#ffd75e");
+    }
+    return s;
+  }},
+  prop:    { name:"Propeller",draw:function(c){
+    return '<path d="M132 96 q0 -54 68 -54 q68 0 68 54 q-68 12 -136 0 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M200 42 v52" stroke="'+LINE+'" stroke-width="4" opacity="0.5"/>'
+      + '<path d="M200 30 q-48 -18 -56 4 q46 14 56 -4 z" fill="#ff8ab5" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'
+      + '<path d="M200 30 q48 -18 56 4 q-46 14 -56 -4 z" fill="#7ee8ff" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'
+      + C(200,30,7,"#ffd75e",4);
+  }},
+  bucket:  { name:"Bucket",   draw:function(c){
+    return '<path d="M132 92 q-4 -56 68 -56 q72 0 68 56 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M96 94 q104 18 208 0 q2 24 -18 28 q-86 16 -172 0 q-20 -4 -18 -28 z" fill="'+shade(c.hat,-0.12)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+  }},
+  band:    { name:"Headband", draw:function(c){
+    return '<path d="M112 116 q88 -34 176 0 q-2 16 -10 14 q-78 -26 -156 0 q-8 2 -10 -14 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+  }},
+  bow:     { name:"Bow",      draw:function(c){
+    return '<g transform="translate(246,72) rotate(-14)">'
+      + '<path d="M0 0 L-40 -22 v44 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M0 0 L40 -22 v44 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<circle cx="0" cy="0" r="11" fill="'+shade(c.hat,-0.2)+'" stroke="'+LINE+'" stroke-width="5"/></g>';
+  }},
+  flower:  { name:"Flower",   draw:function(c){
+    var s = '<g transform="translate(258,84)">', i;
+    for(i=0;i<6;i++) s += '<ellipse cx="'+(Math.cos(i*Math.PI/3)*20).toFixed(1)+'" cy="'+(Math.sin(i*Math.PI/3)*20).toFixed(1)+'" rx="15" ry="12" transform="rotate('+(i*60)+' '+(Math.cos(i*Math.PI/3)*20).toFixed(1)+' '+(Math.sin(i*Math.PI/3)*20).toFixed(1)+')" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="4"/>';
+    return s + '<circle cx="0" cy="0" r="12" fill="#ffd75e" stroke="'+LINE+'" stroke-width="4"/></g>';
+  }},
+  cat:     { name:"Cat ears", draw:function(c){
+    return both('<path d="M122 104 L130 20 L180 78 Z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M133 90 L138 44 L166 76 Z" fill="#ffa8bd"/>');
+  }},
+  cans:    { name:"Headphones",draw:function(c){
+    return '<path d="M104 178 q0 -104 96 -104 q96 0 96 104" fill="none" stroke="'+c.hat+'" stroke-width="16" stroke-linecap="round"/>'
+      + '<path d="M104 178 q0 -104 96 -104 q96 0 96 104" fill="none" stroke="'+LINE+'" stroke-width="4" stroke-dasharray="0 1"/>'
+      + both('<rect x="82" y="152" width="44" height="62" rx="18" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5"/>'
+      + '<rect x="92" y="162" width="24" height="42" rx="12" fill="'+shade(c.hat,-0.25)+'"/>');
+  }},
+  halo:    { name:"Halo",     draw:function(c){
+    return '<ellipse cx="200" cy="30" rx="56" ry="16" fill="none" stroke="'+c.hat+'" stroke-width="12"/>'
+      + '<ellipse cx="200" cy="30" rx="56" ry="16" fill="none" stroke="'+LINE+'" stroke-width="3" opacity="0.5"/>';
+  }},
+  beret:   { name:"Beret",    draw:function(c){
+    return '<path d="M112 92 q-6 -58 88 -58 q94 0 88 58 q-88 18 -176 0 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M112 92 q88 16 176 0 q2 14 -12 16 q-76 12 -152 0 q-14 -2 -12 -16 z" fill="'+shade(c.hat,-0.22)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<circle cx="176" cy="34" r="9" fill="'+shade(c.hat,-0.22)+'" stroke="'+LINE+'" stroke-width="4"/>';
+  }},
+  bandana: { name:"Bandana",  draw:function(c){
+    return '<path d="M114 112 q86 -40 172 0 q-6 -50 -86 -50 q-80 0 -86 50 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M282 104 q34 6 40 26 q-24 4 -36 -6 z" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + dots([[150,88],[186,74],[224,80],[258,96]],5,shade(c.hat,0.45));
+  }},
+  antenna: { name:"Antennae", draw:function(c){
+    return both('<path d="M172 78 q-22 -34 -34 -52" fill="none" stroke="'+LINE+'" stroke-width="6" stroke-linecap="round"/>'
+      + '<circle cx="138" cy="24" r="13" fill="'+c.hat+'" stroke="'+LINE+'" stroke-width="5"/>');
+  }}
+};
+
+/* ---------------------------------------------------------------
+   CLOTHES — shoulders start at y=296
+   --------------------------------------------------------------- */
+var BODY = "M84 400 C84 336 132 296 200 296 C268 296 316 336 316 400 Z";
+function shirt(fill){ return '<path d="'+BODY+'" fill="'+fill+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'; }
+function collarSkin(c){ return '<path d="M172 296 q28 34 56 0 q-28 -8 -56 0 z" fill="'+c.skin+'"/>'; }
+function bodyClip(u){ return '<defs><clipPath id="'+u+'c"><path d="'+BODY+'"/></clipPath></defs>'; }
+function bodyLine(){ return '<path d="'+BODY+'" fill="none" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'; }
+
+var CLOTHES = {
+  tee:     { name:"T-shirt", draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M170 298 q30 34 60 0" fill="'+shade(c.skin,-0.05)+'" stroke="'+LINE+'" stroke-width="5"/>'
+      + '<path d="M120 330 q14 34 10 70 M280 330 q-14 34 -10 70" fill="none" stroke="'+LINE+'" stroke-width="4.5" opacity="0.55"/>';
+  }},
+  hoodie:  { name:"Hoodie",  draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M140 300 q60 -26 120 0 q-10 52 -60 52 q-50 0 -60 -52 z" fill="'+shade(c.cloth,-0.14)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M176 344 v40 M224 344 v40" stroke="'+c.cloth2+'" stroke-width="7" stroke-linecap="round"/>'
+      + '<circle cx="176" cy="386" r="6" fill="'+c.cloth2+'"/><circle cx="224" cy="386" r="6" fill="'+c.cloth2+'"/>'
+      + '<path d="M144 382 q56 18 112 0" fill="none" stroke="'+LINE+'" stroke-width="4.5" opacity="0.55"/>';
+  }},
+  collar:  { name:"Shirt",   draw:function(c){
+    return shirt(c.cloth) + collarSkin(c)
+      + '<path d="M172 298 L200 336 L168 330 Z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M228 298 L200 336 L232 330 Z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<circle cx="200" cy="356" r="5" fill="'+LINE+'"/><circle cx="200" cy="384" r="5" fill="'+LINE+'"/>';
+  }},
+  suit:    { name:"Suit",    draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M176 300 L200 348 L224 300 q26 8 26 24 v76 h-100 v-76 q0 -16 26 -24 z" fill="#fdfbff" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M200 344 l-12 16 l12 40 l12 -40 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'
+      + '<path d="M176 300 L200 348 L160 352 Z" fill="'+shade(c.cloth,-0.12)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M224 300 L200 348 L240 352 Z" fill="'+shade(c.cloth,-0.12)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>';
+  }},
+  tank:    { name:"Tank top",draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M166 300 q34 66 68 0 q-12 -6 -22 -4 q-12 22 -24 0 q-10 -2 -22 4 z" fill="'+c.skin+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>';
+  }},
+  stripe:  { name:"Stripes", draw:function(c,u){
+    return bodyClip(u) + shirt(c.cloth)
+      + '<g clip-path="url(#'+u+'c)">'
+      + '<rect x="80" y="318" width="240" height="18" fill="'+c.cloth2+'"/>'
+      + '<rect x="80" y="354" width="240" height="18" fill="'+c.cloth2+'"/>'
+      + '<rect x="80" y="390" width="240" height="18" fill="'+c.cloth2+'"/></g>'
+      + bodyLine()
+      + '<path d="M170 298 q30 30 60 0" fill="'+c.skin+'" stroke="'+LINE+'" stroke-width="5"/>';
+  }},
+  knit:    { name:"Knit",    draw:function(c,u){
+    var s = bodyClip(u) + shirt(c.cloth) + '<g clip-path="url(#'+u+'c)">', i, y, x, row;
+    for(i=0;i<4;i++){
+      y = 326 + i*24;
+      row = "M76 "+y;
+      for(x=0;x<8;x++) row += " l16 -11 l16 11";
+      s += '<path d="'+row+'" fill="none" stroke="'+c.cloth2+'" stroke-width="6" stroke-linejoin="round"/>';
+    }
+    s += '</g>' + bodyLine()
+      + '<path d="M166 296 q34 34 68 0 q-8 22 -34 22 q-26 0 -34 -22 z" fill="'+shade(c.cloth,-0.16)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+    return s;
+  }},
+  puffer:  { name:"Puffer",  draw:function(c,u){
+    var s = bodyClip(u) + shirt(c.cloth) + '<g clip-path="url(#'+u+'c)">', i;
+    for(i=0;i<4;i++) s += RT(72,306+i*26,256,22,11,shade(c.cloth,0.12),4);
+    return s + '</g>' + bodyLine()
+      + '<path d="M168 296 q32 30 64 0 q-6 20 -32 20 q-26 0 -32 -20 z" fill="'+shade(c.cloth,-0.2)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + PL("M200 320 v78", c.cloth2, 5, 0.8);
+  }},
+  varsity: { name:"Varsity", draw:function(c,u){
+    return bodyClip(u) + shirt(c.cloth2)
+      + '<g clip-path="url(#'+u+'c)"><path d="M148 292 h104 v112 h-104 z" fill="'+c.cloth+'"/>'
+      + '<rect x="76" y="380" width="248" height="14" fill="'+shade(c.cloth,-0.2)+'"/></g>'
+      + bodyLine()
+      + '<path d="M170 296 q30 30 60 0 q-6 18 -30 18 q-24 0 -30 -18 z" fill="'+shade(c.cloth,-0.2)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M178 336 v44 h9 v-26 l13 20 l13 -20 v26 h9 v-44 h-10 l-12 19 l-12 -19 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="3.5" stroke-linejoin="round"/>';
+  }},
+  denim:   { name:"Denim",   draw:function(c){
+    return shirt(c.cloth) + collarSkin(c)
+      + '<path d="M172 298 L200 334 L166 328 Z" fill="'+shade(c.cloth,0.16)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M228 298 L200 334 L234 328 Z" fill="'+shade(c.cloth,0.16)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + RT(126,344,44,34,4,"none",4) + RT(230,344,44,34,4,"none",4)
+      + PL("M200 340 v60", LINE, 3, 0.5)
+      + '<path d="M112 330 q12 30 10 66" fill="none" stroke="'+c.cloth2+'" stroke-width="3" stroke-dasharray="8 7"/>'
+      + '<path d="M288 330 q-12 30 -10 66" fill="none" stroke="'+c.cloth2+'" stroke-width="3" stroke-dasharray="8 7"/>';
+  }},
+  overall: { name:"Overalls",draw:function(c){
+    return shirt(c.cloth2)
+      + '<path d="M150 334 h100 v66 h-100 z" fill="'+c.cloth+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M158 336 q-6 -34 20 -40 M242 336 q6 -34 -20 -40" fill="none" stroke="'+c.cloth+'" stroke-width="14" stroke-linecap="round"/>'
+      + '<path d="M158 336 q-6 -34 20 -40 M242 336 q6 -34 -20 -40" fill="none" stroke="'+LINE+'" stroke-width="3" opacity="0.35"/>'
+      + '<circle cx="160" cy="344" r="5" fill="'+LINE+'"/><circle cx="240" cy="344" r="5" fill="'+LINE+'"/>';
+  }},
+  apron:   { name:"Apron",   draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M164 306 q36 24 72 0 q18 10 18 30 v64 h-108 v-64 q0 -20 18 -30 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + PL("M170 308 q30 -22 60 0", shade(c.cloth2,-0.35), 5, 0.7)
+      + RT(178,350,44,30,4,"none",4)
+      + PL("M146 356 q-22 6 -30 20 M254 356 q22 6 30 20", shade(c.cloth2,-0.3), 7);
+  }},
+  turtle:  { name:"Turtleneck",draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M168 252 q32 20 64 0 v46 q-32 18 -64 0 z" fill="'+shade(c.cloth,0.12)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+  }},
+  sailor:  { name:"Sailor",  draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M158 300 q42 30 84 0 q22 10 24 34 l-24 8 q-6 -18 -18 -24 q-24 18 -48 0 q-12 6 -18 24 l-24 -8 q2 -24 24 -34 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M200 330 l-16 26 q16 14 32 0 z" fill="#e05252" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'
+      + PL("M118 356 h36 M282 356 h-36", shade(c.cloth,-0.2), 5, 0.7);
+  }},
+  kimono:  { name:"Kimono",  draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M170 296 L200 356 L146 400 h-30 q4 -60 54 -104 z" fill="'+shade(c.cloth,0.18)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M230 296 L200 356 L254 400 h30 q-4 -60 -54 -104 z" fill="'+shade(c.cloth,-0.16)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M104 370 q96 26 192 0 v26 q-96 22 -192 0 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>';
+  }},
+  lab:     { name:"Lab coat",draw:function(c){
+    return shirt("#f7f6fb")
+      + '<path d="M176 298 L200 344 L224 298 q16 6 16 20 v82 h-80 v-82 q0 -14 16 -20 z" fill="'+c.cloth+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<rect x="246" y="336" width="40" height="34" rx="6" fill="none" stroke="'+LINE+'" stroke-width="4"/>'
+      + '<path d="M258 340 v18 M268 340 v18" stroke="'+c.cloth2+'" stroke-width="6" stroke-linecap="round"/>';
+  }},
+  space:   { name:"Space suit",draw:function(c){
+    return shirt("#f2f4fb")
+      + '<path d="M150 300 q50 26 100 0 q10 8 10 22 h-120 q0 -14 10 -22 z" fill="'+shade(c.cloth,-0.1)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + RT(158,336,84,48,10,c.cloth,4.5)
+      + dots([[176,352],[200,352],[224,352]],6,c.cloth2)
+      + RT(170,364,60,8,4,shade(c.cloth,0.4))
+      + PL("M112 342 h26 M288 342 h-26", c.cloth2, 8);
+  }},
+  armor:   { name:"Armour",  draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M162 298 q38 26 76 0 q8 10 8 22 q-46 24 -92 0 q0 -12 8 -22 z" fill="'+shade(c.cloth,0.25)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M90 338 q28 -22 52 -4 q-8 30 -12 50 q-32 4 -46 -10 q0 -22 6 -36 z" fill="'+shade(c.cloth,0.15)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M310 338 q-28 -22 -52 -4 q8 30 12 50 q32 4 46 -10 q0 -22 -6 -36 z" fill="'+shade(c.cloth,0.15)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + PL("M200 330 v66", shade(c.cloth,-0.3), 4, 0.8)
+      + dots([[172,344],[228,344],[172,376],[228,376]],5,c.cloth2);
+  }},
+  ninja:   { name:"Ninja",   draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M170 296 q30 28 60 0 q-8 20 -30 20 q-22 0 -30 -20 z" fill="'+shade(c.cloth,-0.25)+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M140 310 q60 78 124 30" fill="none" stroke="'+c.cloth2+'" stroke-width="14"/>'
+      + '<path d="M140 310 q60 78 124 30" fill="none" stroke="'+LINE+'" stroke-width="3" opacity="0.35"/>'
+      + '<path d="M104 366 q96 24 192 0 v22 q-96 22 -192 0 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>';
+  }},
+  hawaii:  { name:"Holiday", draw:function(c,u){
+    var s = bodyClip(u) + shirt(c.cloth) + '<g clip-path="url(#'+u+'c)">';
+    var pts = [[112,340],[152,384],[250,330],[288,372],[196,388],[132,306],[276,300]], i;
+    for(i=0;i<pts.length;i++){
+      s += '<g transform="translate('+pts[i][0]+','+pts[i][1]+')">';
+      for(var k=0;k<5;k++) s += '<ellipse cx="'+(Math.cos(k*1.2566)*9).toFixed(1)+'" cy="'+(Math.sin(k*1.2566)*9).toFixed(1)+'" rx="7" ry="6" fill="'+c.cloth2+'"/>';
+      s += '<circle r="4" fill="#ffd75e"/></g>';
+    }
+    return s + '</g>' + bodyLine()
+      + collarSkin(c)
+      + '<path d="M172 298 L200 336 L168 330 Z" fill="'+shade(c.cloth,0.2)+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>'
+      + '<path d="M228 298 L200 336 L232 330 Z" fill="'+shade(c.cloth,0.2)+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>';
+  }},
+  hero:    { name:"Hero",    draw:function(c){
+    return '<path d="M52 400 q12 -82 80 -106 q-20 66 2 106 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M348 400 q-12 -82 -80 -106 q20 66 -2 106 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + shirt(c.cloth) + star(200,356,34,c.cloth2)
+      + '<path d="M170 298 q30 30 60 0" fill="'+c.skin+'" stroke="'+LINE+'" stroke-width="5"/>';
+  }},
+  scarf:   { name:"Scarf",   draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M156 288 q44 34 88 0 q12 20 0 34 q-44 26 -88 0 q-12 -14 0 -34 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M234 318 q26 26 22 68 l-32 4 q6 -42 -8 -64 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+  }},
+  dress:   { name:"Dress",   draw:function(c){
+    return shirt(c.cloth)
+      + '<path d="M168 300 q32 26 64 0 q-4 22 -32 22 q-28 0 -32 -22 z" fill="'+c.cloth2+'" stroke="'+LINE+'" stroke-width="4.5" stroke-linejoin="round"/>'
+      + '<path d="M96 372 q104 26 208 0" fill="none" stroke="'+c.cloth2+'" stroke-width="12"/>'
+      + '<path d="M96 372 q104 26 208 0" fill="none" stroke="'+LINE+'" stroke-width="3" opacity="0.4"/>';
+  }},
+  none:    { name:"Bare",    draw:function(c){
+    return '<path d="'+BODY+'" fill="'+c.skin+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+  }}
+};
+
+/* ---------------------------------------------------------------
+   EXTRAS
+   --------------------------------------------------------------- */
+var EXTRAS = {
+  none:    { name:"None",     draw:function(){ return ""; } },
+  freckles:{ name:"Freckles", draw:function(c){
+    return both(dots([[146,204],[158,212],[168,200],[152,220],[164,226],[176,214]],3.4,shade(c.skin,-0.34),0.85));
+  }},
+  blush:   { name:"Blush",    draw:function(){
+    return both('<ellipse cx="150" cy="212" rx="22" ry="13" fill="#ff8fa8" opacity="0.55"/>');
+  }},
+  both:    { name:"Rosy",     draw:function(c){
+    return both('<ellipse cx="150" cy="212" rx="22" ry="13" fill="#ff8fa8" opacity="0.5"/>')
+      + both(dots([[146,204],[158,212],[168,200],[152,220]],3.2,shade(c.skin,-0.34),0.8));
+  }},
+  whisk:   { name:"Whiskers", draw:function(c){
+    return both(PL("M136 196 l-34 -10 M134 210 l-36 2 M136 224 l-34 14", shade(c.skin,-0.4), 3.6, 0.85));
+  }},
+  earring: { name:"Earrings", draw:function(c){
+    var x = 200 - faceHW(c) + 6;
+    return both('<circle cx="'+x+'" cy="218" r="9" fill="none" stroke="#ffc93c" stroke-width="5"/>');
+  }},
+  studs:   { name:"Studs",    draw:function(c){
+    var x = 200 - faceHW(c) + 4;
+    return both('<circle cx="'+x+'" cy="206" r="8.5" fill="#7ee8ff" stroke="'+LINE+'" stroke-width="4"/>'
+      + '<circle cx="'+(x-2)+'" cy="203" r="2.6" fill="#ffffff"/>');
+  }},
+  ring:    { name:"Nose ring",draw:function(c){
+    return '<path d="M190 208 a11 11 0 1 0 20 0" fill="none" stroke="#ffc93c" stroke-width="5" stroke-linecap="round"/>';
+  }},
+  mole:    { name:"Beauty spot",draw:function(){ return '<circle cx="234" cy="238" r="5" fill="'+LINE+'"/>'; } },
+  bandage: { name:"Bandage",  draw:function(){
+    return '<g transform="rotate(-20 250 158)"><rect x="222" y="146" width="56" height="22" rx="8" fill="#ffdca8" stroke="'+LINE+'" stroke-width="4"/>'
+      + '<rect x="238" y="148" width="24" height="18" rx="5" fill="#f3c37e"/>'
+      + dots([[244,153],[256,153],[244,161],[256,161]],2,LINE)+'</g>';
+  }},
+  tattoo:  { name:"Tattoo",   draw:function(c){
+    return '<g opacity="0.85">' + star(204,282,12,"#3a5bd9") + dots([[182,290],[222,288]],3.4,"#3a5bd9") + '</g>';
+  }},
+  paint:   { name:"Face paint",draw:function(c){
+    return both('<path d="M136 192 q24 8 22 20 q-24 -6 -22 -20 z" fill="'+c.cloth+'"/>'
+      + '<path d="M140 218 q24 8 22 20 q-24 -6 -22 -20 z" fill="'+c.cloth+'"/>');
+  }},
+  tears:   { name:"Tears",    draw:function(c){
+    return both('<path d="M156 194 q-6 34 2 56 q10 -22 8 -56 z" fill="#6fc8ff" stroke="'+LINE+'" stroke-width="2.5" stroke-linejoin="round" opacity="0.95"/>');
+  }},
+  sweat:   { name:"Sweat",    draw:function(c){
+    return '<path d="M274 118 q-16 22 -16 32 q0 12 12 12 q12 0 12 -12 q0 -10 -8 -32 z" fill="#7ecbff" stroke="'+LINE+'" stroke-width="3.5" stroke-linejoin="round"/>'
+      + PL("M300 140 l16 -8 M302 158 l18 2", "#7ecbff", 4, 0.9);
+  }},
+  vein:    { name:"Anger mark",draw:function(){
+    return '<g transform="translate(264,120) rotate(8)" opacity="0.95">'
+      + PL("M-9 -5 L0 -15 L9 -5", "#e05252", 5)
+      + PL("M-9 5 L0 15 L9 5", "#e05252", 5)
+      + PL("M-5 -9 L-15 0 L-5 9", "#e05252", 5)
+      + PL("M5 -9 L15 0 L5 9", "#e05252", 5) + '</g>';
+  }},
+  zzz:     { name:"Sleepy Zs",draw:function(){
+    function z(x,y,s){ return '<path d="M'+x+' '+y+' h'+(16*s)+' l'+(-16*s)+' '+(18*s)+' h'+(16*s)+'" fill="none" stroke="'+LINE+'" stroke-width="'+(4*s)+'" stroke-linecap="round" stroke-linejoin="round"/>'; }
+    return z(296,96,1.4) + z(324,56,1.0) + z(344,26,0.7);
+  }},
+  notes:   { name:"Music",    draw:function(c){
+    function note(x,y,s){
+      return '<g transform="translate('+x+','+y+') scale('+s+')">'
+        + '<ellipse cx="0" cy="14" rx="11" ry="8" transform="rotate(-18)" fill="'+LINE+'"/>'
+        + '<path d="M10 14 V-16 q14 4 16 16 q-6 -8 -16 -6 z" fill="'+LINE+'"/></g>';
+    }
+    return note(312,120,1) + note(342,72,0.75) + note(88,128,0.85);
+  }},
+  sparkles:{ name:"Sparkles", draw:function(){
+    return star(92,110,15,"#ffd75e") + star(312,132,12,"#ffd75e") + star(300,64,9,"#ffd75e") + star(104,206,10,"#ffd75e");
+  }},
+  chain:   { name:"Necklace", draw:function(){
+    return '<path d="M166 300 q34 40 68 0" fill="none" stroke="#ffc93c" stroke-width="6"/>'
+      + '<circle cx="200" cy="330" r="10" fill="#ffc93c" stroke="'+LINE+'" stroke-width="4"/>';
+  }},
+  scar:    { name:"Scar",     draw:function(c){
+    return '<path d="M256 140 v52 M246 154 h20 M246 176 h20" stroke="'+shade(c.skin,-0.42)+'" stroke-width="5" stroke-linecap="round"/>';
+  }},
+  mask:    { name:"Face mask",draw:function(c){
+    return '<path d="M148 206 q52 -14 104 0 q-4 56 -52 62 q-48 -6 -52 -62 z" fill="#dff3ff" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+      + '<path d="M148 210 l-32 -12 M252 210 l32 -12" stroke="'+LINE+'" stroke-width="5" stroke-linecap="round"/>'
+      + '<path d="M154 228 q46 10 92 0 M156 246 q44 10 88 0" fill="none" stroke="#9cc9e0" stroke-width="4"/>';
+  }}
+};
+
+/* ---------------------------------------------------------------
+   BUDDIES — a little friend perched on the left shoulder
+   --------------------------------------------------------------- */
+function atShoulder(s,scale){
+  return '<g transform="translate(96,320) scale('+(scale||1)+')">'+s+'</g>';
+}
+var BUDDIES = {
+  none:   { name:"None",   draw:function(){ return ""; } },
+  cat:    { name:"Cat",    draw:function(c){
+    return atShoulder(
+      P("M-26 40 q-6 -34 26 -34 q32 0 26 34 z", "#f7a23f", 4.5)
+      + P("M-22 -8 L-26 -34 L-2 -18 Z", "#f7a23f", 4)
+      + P("M22 -8 L26 -34 L2 -18 Z", "#f7a23f", 4)
+      + C(0,0,24,"#f7a23f",4.5)
+      + dots([[-9,-2],[9,-2]],4,LINE)
+      + PL("M-3 8 q3 4 6 0", LINE, 3)
+      + PL("M28 36 q22 -6 16 -30", "#f7a23f", 8)
+    );
+  }},
+  bird:   { name:"Bird",   draw:function(c){
+    return atShoulder(
+      P("M0 36 q-28 0 -28 -24 q0 -26 28 -26 q28 0 28 26 q0 24 -28 24 z", "#5bc8f5", 4.5)
+      + P("M6 6 q22 -4 22 14 q-14 8 -22 -14 z", shade("#5bc8f5",-0.2), 4)
+      + C(-8,-8,4,LINE)
+      + P("M-26 -2 l-16 6 l16 6 z", "#ffc93c", 3.5)
+      + PL("M-12 36 v10 M8 36 v10", "#ffc93c", 4)
+    );
+  }},
+  ghost:  { name:"Ghost",  draw:function(c){
+    return atShoulder(
+      P("M-26 30 q-2 -60 26 -60 q28 0 26 60 q-10 -10 -17 0 q-9 10 -18 0 q-9 -10 -17 0 z", "#f2f0ff", 4.5)
+      + dots([[-9,-14],[9,-14]],4.5,LINE)
+      + '<ellipse cx="0" cy="2" rx="6" ry="5" fill="'+LINE+'"/>'
+    );
+  }},
+  bee:    { name:"Bee",    draw:function(c){
+    return atShoulder(
+      '<ellipse cx="-16" cy="-18" rx="16" ry="11" transform="rotate(-24 -16 -18)" fill="#dff3ff" stroke="'+LINE+'" stroke-width="3.5"/>'
+      + '<ellipse cx="16" cy="-18" rx="16" ry="11" transform="rotate(24 16 -18)" fill="#dff3ff" stroke="'+LINE+'" stroke-width="3.5"/>'
+      + '<ellipse cx="0" cy="6" rx="26" ry="21" fill="#ffc93c" stroke="'+LINE+'" stroke-width="4.5"/>'
+      + '<path d="M-4 -14 v40 M10 -12 v36" stroke="'+LINE+'" stroke-width="6"/>'
+      + dots([[-14,0],[-2,2]],3.2,LINE)
+    );
+  }},
+  frog:   { name:"Frog",   draw:function(c){
+    return atShoulder(
+      P("M-30 34 q-4 -34 30 -34 q34 0 30 34 z", "#5bd48a", 4.5)
+      + C(-14,-8,13,"#5bd48a",4.5) + C(14,-8,13,"#5bd48a",4.5)
+      + dots([[-14,-8],[14,-8]],5,LINE)
+      + PL("M-12 18 q12 8 24 0", LINE, 3.5)
+    );
+  }},
+  bot:    { name:"Robot",  draw:function(c){
+    return atShoulder(
+      PL("M0 -24 v-12", LINE, 4) + C(0,-40,6,"#ff6b8a",3.5)
+      + RT(-24,-24,48,44,10,"#c7d0e8",4.5)
+      + RT(-14,-12,28,14,4,"#2b2145",0)
+      + dots([[-7,-5],[7,-5]],3,"#65f0b5")
+      + RT(-18,26,36,14,6,"#9aa7bd",4)
+    );
+  }},
+  balloon:{ name:"Balloon",draw:function(c){
+    return '<g transform="translate(96,300)">'
+      + PL("M0 0 q-14 -26 0 -48", LINE, 3)
+      + P("M0 -48 q-26 0 -26 -26 q0 -26 26 -26 q26 0 26 26 q0 26 -26 26 z", "#ff6b8a", 4.5)
+      + P("M-6 -46 h12 l-6 8 z", "#ff6b8a", 3)
+      + '<ellipse cx="-9" cy="-84" rx="6" ry="8" fill="#ffffff" opacity="0.55"/></g>';
+  }},
+  plant:  { name:"Plant",  draw:function(c){
+    return atShoulder(
+      PL("M0 18 q-22 -14 -18 -40", "#4a8f3c", 6)
+      + PL("M0 18 q22 -14 18 -40", "#4a8f3c", 6)
+      + P("M-18 -22 q-16 -6 -14 -20 q16 -2 20 16 z", "#5bd48a", 3.5)
+      + P("M18 -22 q16 -6 14 -20 q-16 -2 -20 16 z", "#5bd48a", 3.5)
+      + P("M-2 -26 q0 -22 12 -30 q8 16 -4 32 z", "#5bd48a", 3.5)
+      + P("M-22 14 h44 l-6 26 h-32 z", "#e07a3f", 4.5)
+      + RT(-26,6,52,12,4,"#f0904f",4)
+    );
+  }}
+};
+
+/* =====================================================================
+   ASSEMBLY
+   ===================================================================== */
+var CATS = [
+  { key:"bg",     label:"Backdrop", set:BGS,     field:"bg",     vb:"0 0 400 400",     colors:["bg1","bg2"] },
+  { key:"face",   label:"Face",     set:FACES,   field:"face",   vb:"88 60 224 240",   colors:["skin"] },
+  { key:"eyes",   label:"Eyes",     set:EYES,    field:"eyes",   vb:"124 128 152 92",  colors:["eye"] },
+  { key:"brows",  label:"Brows",    set:BROWS,   field:"brows",  vb:"124 112 152 80",  colors:["hair"] },
+  { key:"nose",   label:"Nose",     set:NOSES,   field:"nose",   vb:"156 168 88 62",   colors:["skin"] },
+  { key:"mouth",  label:"Mouth",    set:MOUTHS,  field:"mouth",  vb:"148 194 104 76",  colors:[] },
+  { key:"hair",   label:"Hair",     set:HAIRS,   field:"hair",   vb:"72 16 256 250",   colors:["hair"] },
+  { key:"beard",  label:"Whiskers", set:BEARDS,  field:"beard",  vb:"112 150 176 150", colors:["hair"] },
+  { key:"glasses",label:"Eyewear",  set:GLASSES, field:"glasses",vb:"96 126 208 96",   colors:["glass"] },
+  { key:"hat",    label:"Hats",     set:HATS,    field:"hat",    vb:"56 -14 288 210",  colors:["hat"] },
+  { key:"clothes",label:"Clothes",  set:CLOTHES, field:"clothes",vb:"70 262 260 138",  colors:["cloth","cloth2"] },
+  { key:"extra",  label:"Extras",   set:EXTRAS,  field:"extra",  vb:"56 16 300 330",   colors:[] },
+  { key:"buddy",  label:"Buddy",    set:BUDDIES, field:"buddy",  vb:"44 186 150 190",  colors:[] }
+];
+
+var COLOR_FIELDS = {
+  bg1:   { label:"Backdrop", palette:["#ffe0a3","#ffd1dc","#c9ecff","#d5f5c8","#efe4ff","#ffd9c0","#2b2145","#f6f2e8","#ffffff","#a8e6d8"] },
+  bg2:   { label:"Accent",   palette:["#ffb677","#ff9fb6","#8ed0ff","#a9e08a","#c9aaff","#ff8f6b","#4b3b7a","#e4d9c4","#ffd75e","#63cbb4"] },
+  skin:  { label:"Skin",     palette:["#ffe0c4","#f7cfa8","#eeb98a","#d99a63","#b9713f","#8d5124","#5f341b","#ffd3b5","#c9f2d8","#cfd6ff"] },
+  hair:  { label:"Hair",     palette:["#2b2145","#5a3a22","#8a5a2b","#c98b3f","#e8c26a","#b23a2f","#d4d0e2","#ff77c4","#4fc9ff","#5bd48a"] },
+  eye:   { label:"Eyes",     palette:["#2b2145","#4a7a3a","#2f6fb5","#7a4a25","#8a4fd8","#c73b5a","#3fd6a4","#e0a82e"] },
+  glass: { label:"Frames",   palette:["#2b2145","#c73b5a","#2f6fb5","#3fd6a4","#ffc93c","#f4f1fb","#8a4fd8","#e07a3f"] },
+  hat:   { label:"Hat",      palette:["#e05252","#2f6fb5","#3fd6a4","#ffc93c","#8a4fd8","#2b2145","#f4f1fb","#ff8ab5","#4a8f3c","#e07a3f"] },
+  cloth: { label:"Clothes",  palette:["#4a6fd1","#e05252","#3fd6a4","#ffc93c","#8a4fd8","#2b2145","#f4f1fb","#ff8ab5","#4a8f3c","#e07a3f"] },
+  cloth2:{ label:"Trim",     palette:["#ffffff","#ffc93c","#e05252","#2b2145","#3fd6a4","#4a6fd1","#ff8ab5","#8a4fd8","#4a8f3c","#f7cfa8"] }
+};
+
+/* whole-picture colour schemes — these leave skin tone alone on purpose */
+var PALETTES = [
+  { name:"Pastel",  c:{ bg1:"#ffe9f4", bg2:"#dff0ff", hair:"#c98b3f", eye:"#8a4fd8", glass:"#ff8ab5", hatC:"#ffd1dc", cloth:"#c9ecff", cloth2:"#ffffff" } },
+  { name:"Neon",    c:{ bg1:"#1b1040", bg2:"#ff2fd0", hair:"#4fc9ff", eye:"#3fd6a4", glass:"#ffd75e", hatC:"#ff2fd0", cloth:"#2b2145", cloth2:"#3fd6a4" } },
+  { name:"Earth",   c:{ bg1:"#efe3cd", bg2:"#c8a97a", hair:"#5a3a22", eye:"#7a4a25", glass:"#8a5a2b", hatC:"#a8763f", cloth:"#6f7f52", cloth2:"#efe3cd" } },
+  { name:"Mono",    c:{ bg1:"#f2f2f4", bg2:"#c9c9d2", hair:"#2b2145", eye:"#2b2145", glass:"#2b2145", hatC:"#2b2145", cloth:"#4a4660", cloth2:"#ffffff" } },
+  { name:"Sunset",  c:{ bg1:"#ffb677", bg2:"#ff6b8a", hair:"#5a3a22", eye:"#7a4a25", glass:"#e05252", hatC:"#e05252", cloth:"#ffc93c", cloth2:"#fff3d6" } },
+  { name:"Ocean",   c:{ bg1:"#cdf0ff", bg2:"#2f6fb5", hair:"#2b2145", eye:"#2f6fb5", glass:"#3fd6a4", hatC:"#2f6fb5", cloth:"#3fd6a4", cloth2:"#ffffff" } },
+  { name:"Candy",   c:{ bg1:"#ffe3f1", bg2:"#ff9fb6", hair:"#ff77c4", eye:"#8a4fd8", glass:"#ff8ab5", hatC:"#7ee8ff", cloth:"#ff8ab5", cloth2:"#fff6bd" } },
+  { name:"Forest",  c:{ bg1:"#dff0d6", bg2:"#4a8f3c", hair:"#5a3a22", eye:"#4a7a3a", glass:"#4a8f3c", hatC:"#4a8f3c", cloth:"#6f7f52", cloth2:"#e8c26a" } },
+  { name:"Midnight",c:{ bg1:"#1a1636", bg2:"#8ed0ff", hair:"#d4d0e2", eye:"#7ee8ff", glass:"#f4f1fb", hatC:"#4b3b7a", cloth:"#2f2a55", cloth2:"#8ed0ff" } }
+];
+
+/* one-click outfits */
+var LOOKS = [
+  { name:"Wizard",   s:{ bg:"night", bg1:"#241a4a", bg2:"#ffd75e", hairStyle:"long", hair:"#d4d0e2", beard:"wizard",
+      hat:"wizard", hatC:"#4a3fb5", clothes:"kimono", cloth:"#6b4fd8", cloth2:"#ffd75e", glasses:"none",
+      eyes:"round", brows:"bushy", mouth:"smile", extra:"sparkles", buddy:"none" } },
+  { name:"Space",    s:{ bg:"night", bg1:"#0f1030", bg2:"#8ed0ff", hairStyle:"buzz", hat:"space", hatC:"#f4f1fb",
+      clothes:"space", cloth:"#e07a3f", cloth2:"#ffd75e", glasses:"none", eyes:"sparkle", mouth:"grin",
+      beard:"none", extra:"none", buddy:"bot" } },
+  { name:"Pirate",   s:{ bg:"waves", bg1:"#cdf0ff", bg2:"#2f6fb5", hairStyle:"wavy", hair:"#2b2145", hat:"pirate",
+      hatC:"#2b2145", glasses:"patch", clothes:"stripe", cloth:"#e05252", cloth2:"#f4f1fb", beard:"full",
+      mouth:"smirk", eyes:"round", extra:"earring", buddy:"bird" } },
+  { name:"Punk",     s:{ bg:"rays", bg1:"#2b2145", bg2:"#ff2fd0", hairStyle:"mohawk", hair:"#ff2fd0", hat:"none",
+      glasses:"sun", glass:"#2b2145", clothes:"denim", cloth:"#4a6fd1", cloth2:"#ffd75e", brows:"angry",
+      mouth:"smirk", eyes:"angry", extra:"studs", buddy:"none" } },
+  { name:"Cosy",     s:{ bg:"fade", bg1:"#ffe0a3", bg2:"#ffd1dc", hairStyle:"bun", hair:"#8a5a2b", hat:"beanie",
+      hatC:"#e05252", clothes:"knit", cloth:"#c98b3f", cloth2:"#fff3d6", glasses:"round", glass:"#5a3a22",
+      eyes:"happy", mouth:"smile", extra:"blush", buddy:"plant" } },
+  { name:"Robot",    s:{ bg:"grid", bg1:"#e4e8f5", bg2:"#9aa7bd", face:"square", skin:"#cfd6ff", hairStyle:"bald",
+      eyes:"robot", eye:"#3fd6a4", brows:"none", nose:"none", mouth:"flat", hat:"antenna", hatC:"#9aa7bd",
+      clothes:"armor", cloth:"#9aa7bd", cloth2:"#3fd6a4", beard:"none", extra:"none", buddy:"bot" } },
+  { name:"Royal",    s:{ bg:"rays", bg1:"#4b3b7a", bg2:"#ffd75e", hairStyle:"curly", hair:"#2b2145", hat:"crown",
+      hatC:"#ffc93c", clothes:"suit", cloth:"#8a4fd8", cloth2:"#ffc93c", glasses:"monocle", glass:"#ffc93c",
+      eyes:"round", brows:"curved", mouth:"smile", extra:"chain", buddy:"none" } },
+  { name:"Science",  s:{ bg:"plain", bg1:"#e8f6ff", bg2:"#8ed0ff", hairStyle:"messy", hair:"#d4d0e2", hat:"none",
+      glasses:"goggles", glass:"#c73b5a", clothes:"lab", cloth:"#3fd6a4", cloth2:"#4a6fd1", eyes:"shock",
+      brows:"raised", mouth:"oh", extra:"sweat", buddy:"none" } },
+  { name:"Sporty",   s:{ bg:"stripes", bg1:"#d5f5c8", bg2:"#4a8f3c", hairStyle:"pony", hair:"#c98b3f",
+      hat:"band", hatC:"#e05252", clothes:"varsity", cloth:"#e05252", cloth2:"#ffffff", glasses:"none",
+      eyes:"happy", brows:"raised", mouth:"grin", extra:"both", buddy:"none" } },
+  { name:"Vampire",  s:{ bg:"spot", bg1:"#1a1636", bg2:"#6b2f4a", face:"heart", skin:"#e8dff0", hairStyle:"swoop",
+      hair:"#2b2145", hat:"none", glasses:"none", clothes:"suit", cloth:"#2b2145", cloth2:"#c73b5a",
+      eyes:"angry", eye:"#c73b5a", brows:"angry", mouth:"fangs", extra:"none", buddy:"ghost" } },
+  { name:"Cottage",  s:{ bg:"clouds", bg1:"#cdf0ff", bg2:"#ffffff", hairStyle:"braids", hair:"#c98b3f",
+      hat:"wreath", hatC:"#ff8ab5", clothes:"overall", cloth:"#4a6fd1", cloth2:"#fff3d6", glasses:"none",
+      eyes:"happy", mouth:"dimple", extra:"freckles", buddy:"bee" } },
+  { name:"Cyber",    s:{ bg:"rings", bg1:"#120f2e", bg2:"#3fd6a4", hairStyle:"under", hair:"#4fc9ff",
+      glasses:"cyber", glass:"#3fd6a4", hat:"none", clothes:"ninja", cloth:"#2b2145", cloth2:"#3fd6a4",
+      eyes:"pixel", eye:"#3fd6a4", brows:"sharp", mouth:"flat", extra:"tattoo", buddy:"none" } }
+];
+
+/* expressions — eyes, brows and mouth in one tap */
+var MOODS = [
+  { name:"Happy",     s:{ eyes:"happy",  brows:"raised",   mouth:"grin" } },
+  { name:"Sad",       s:{ eyes:"cry",    brows:"worried",  mouth:"frown" } },
+  { name:"Angry",     s:{ eyes:"angry",  brows:"angry",    mouth:"flat" } },
+  { name:"Surprised", s:{ eyes:"shock",  brows:"arch",     mouth:"gasp" } },
+  { name:"Sleepy",    s:{ eyes:"sleepy", brows:"straight", mouth:"wobble" } },
+  { name:"Silly",     s:{ eyes:"swirl",  brows:"raised",   mouth:"tongue" } },
+  { name:"Smitten",   s:{ eyes:"heart",  brows:"curved",   mouth:"kiss" } },
+  { name:"Cool",      s:{ eyes:"side",   brows:"straight", mouth:"smirk" } },
+  { name:"Calm",      s:{ eyes:"closed", brows:"curved",   mouth:"smile" } },
+  { name:"Nervous",   s:{ eyes:"squint", brows:"worried",  mouth:"zig" } }
+];
+
+/* state keys: part ids live under the category field, colours under colour keys.
+   hair (part) and hair (colour) would clash, so the part is "hairStyle" and the
+   hat colour is "hatC". stateKey / colorKey keep the two worlds apart. */
+var DEFAULT_STATE = {
+  bg:"fade", face:"round", eyes:"round", brows:"straight", nose:"button", mouth:"smile",
+  hairStyle:"short", beard:"none", glasses:"none", hat:"none", clothes:"tee", extra:"none", buddy:"none",
+  bg1:"#c9ecff", bg2:"#efe4ff", skin:"#f7cfa8", hair:"#5a3a22", eye:"#2b2145",
+  glass:"#2b2145", hatC:"#e05252", cloth:"#4a6fd1", cloth2:"#ffffff"
+};
+function cloneState(s){ var o={}, k; for(k in s) o[k]=s[k]; return o; }
+var state = cloneState(DEFAULT_STATE);
+
+function stateKey(field){ return field==="hair" ? "hairStyle" : field; }
+function colorKey(k){ return k==="hat" ? "hatC" : k; }
+function pick(set, id, fallback){ return set[id] || set[fallback] || set[Object.keys(set)[0]]; }
+
+/* colours handed to the drawing functions */
+function palette(st){
+  return {
+    bg1:st.bg1, bg2:st.bg2, skin:st.skin, hair:st.hair, eye:st.eye,
+    glass:st.glass, hat:st.hatC, cloth:st.cloth, cloth2:st.cloth2, face:st.face
+  };
+}
+
+function esc(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function buildSVG(st, uid, opts){
+  opts = opts || {};
+  var c = palette(st);
+  var bg      = pick(BGS, opts.transparent ? "none" : st.bg, "plain");
+  var hair    = pick(HAIRS, st.hairStyle, "short");
+  var beard   = pick(BEARDS, st.beard, "none");
+  var clothes = pick(CLOTHES, st.clothes, "tee");
+  var out = "", body = "";
+  /* hair is drawn for an 88-wide head, so squeeze or stretch it to fit the face */
+  var k = ((faceHW(c) + 2) / 90).toFixed(3);
+  function fitHair(s){ return '<g transform="translate(200,0) scale('+k+',1) translate(-200,0)">'+s+'</g>'; }
+
+  out += bg.draw(c, uid + "b");
+
+  body += drawNeck(c);
+  body += clothes.draw(c, uid + "c");
+  if(hair.back) body += fitHair(hair.back(c));
+  body += drawFace(c);
+  if(beard.back) body += beard.back(c);
+  body += pick(BROWS, st.brows, "none").draw(c);
+  body += '<g class="mm-eyes">' + pick(EYES, st.eyes, "round").draw(c) + '</g>';
+  body += pick(NOSES, st.nose, "none").draw(c);
+  body += pick(MOUTHS, st.mouth, "smile").draw(c, uid + "m");
+  if(beard.front) body += beard.front(c);
+  body += pick(GLASSES, st.glasses, "none").draw(c);
+  if(hair.front) body += fitHair(hair.front(c));
+  body += pick(HATS, st.hat, "none").draw(c);
+  body += pick(EXTRAS, st.extra, "none").draw(c);
+  body += pick(BUDDIES, st.buddy, "none").draw(c);
+
+  return out + '<g class="mm-bob">' + body + '</g>';
+}
+
+var VIEWS = { full:"0 0 400 400", close:"92 52 216 216" };
+
+/* wraps the art in a circle / sticker cut and drops a name plate on the bottom */
+function dressUp(inner, uid, vb, opts){
+  var p = vb.split(/\s+/), x = +p[0], y = +p[1], w = +p[2], h = +p[3];
+  var shape = opts.shape || "square", out = "", nm = (opts.name||"").trim();
+
+  if(shape === "circle"){
+    var r = Math.min(w,h)/2 - 3;
+    out += '<defs><clipPath id="'+uid+'k"><circle cx="'+(x+w/2)+'" cy="'+(y+h/2)+'" r="'+r+'"/></clipPath></defs>'
+        +  '<g clip-path="url(#'+uid+'k)">'+inner+'</g>';
+  } else if(shape === "sticker"){
+    var ix = x+9, iy = y+9, iw = w-18, ih = h-18, rr = Math.min(iw,ih)*0.17;
+    out += '<defs><clipPath id="'+uid+'k"><rect x="'+ix+'" y="'+iy+'" width="'+iw+'" height="'+ih+'" rx="'+rr+'"/></clipPath></defs>'
+        +  '<g clip-path="url(#'+uid+'k)">'+inner+'</g>'
+        +  '<rect x="'+ix+'" y="'+iy+'" width="'+iw+'" height="'+ih+'" rx="'+rr+'" fill="none" stroke="#ffffff" stroke-width="14"/>'
+        +  '<rect x="'+ix+'" y="'+iy+'" width="'+iw+'" height="'+ih+'" rx="'+rr+'" fill="none" stroke="'+LINE+'" stroke-width="5"/>';
+  } else {
+    out += inner;
+  }
+
+  if(nm && opts.showName){
+    /* the plate scales with the picture, and the type shrinks to fit the plate */
+    var ph = Math.round(h*0.13);
+    var pwMax = Math.round(w * (shape === "circle" ? 0.68 : 0.82));
+    var fs = Math.max(11, Math.min(Math.round(ph*0.6), Math.floor((pwMax-30)/(nm.length*0.62))));
+    var pw = Math.min(pwMax, Math.round(nm.length*fs*0.62) + 30);
+    var px = x + (w-pw)/2, py = y + h - ph - Math.round(h*0.04);
+    out += '<g><rect x="'+px+'" y="'+py+'" width="'+pw+'" height="'+ph+'" rx="'+(ph/2)+'" fill="#ffffff" stroke="'+LINE+'" stroke-width="'+(w>300?5:4)+'"/>'
+        +  '<text x="'+(x+w/2)+'" y="'+(py + ph/2 + fs*0.35)+'" text-anchor="middle" font-family="Fredoka, Trebuchet MS, Segoe UI, sans-serif" '
+        +  'font-size="'+fs+'" font-weight="700" fill="'+LINE+'">'+esc(nm)+'</text></g>';
+  }
+  return out;
+}
+
+function svgMarkup(st, uid, viewBox, opts){
+  opts = opts || {};
+  var vb = viewBox || VIEWS[opts.zoom||"full"] || VIEWS.full;
+  var inner = buildSVG(st, uid, opts);
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+vb+'" '
+    + 'preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(opts.alt || "Your MeMake character")+'">'
+    + dressUp(inner, uid, vb, opts) + '</svg>';
+}
+
+/* ---------- share code ----------
+   v1 codes had 12 parts + 9 colours. v2 adds the buddy, so 22 chunks.
+   Old codes still load: a 21 chunk code just means "no buddy". */
+var PART_ORDER  = ["bg","face","eyes","brows","nose","mouth","hairStyle","beard","glasses","hat","clothes","extra","buddy"];
+var LEGACY_PART = ["bg","face","eyes","brows","nose","mouth","hairStyle","beard","glasses","hat","clothes","extra"];
+var COLOR_ORDER = ["bg1","bg2","skin","hair","eye","glass","hatC","cloth","cloth2"];
+var SET_FOR = {};
+(function(){
+  for(var i=0;i<CATS.length;i++) SET_FOR[stateKey(CATS[i].field)] = CATS[i].set;
+})();
+
+function encodeState(st){
+  st = st || state;
+  return PART_ORDER.map(function(k){ return String(st[k]); })
+    .concat(COLOR_ORDER.map(function(k){ return String(st[k]).replace("#",""); }))
+    .join("-");
+}
+/* returns null when the code is unusable, otherwise a state object.
+   result.fuzzy is true when some chunk had to fall back to a default. */
+function decodeState(str){
+  var parts = String(str).trim().replace(/^#/,"").split("-");
+  var order = parts.length === (LEGACY_PART.length + COLOR_ORDER.length) ? LEGACY_PART
+            : parts.length === (PART_ORDER.length + COLOR_ORDER.length) ? PART_ORDER : null;
+  if(!order) return null;
+  var next = cloneState(DEFAULT_STATE), fuzzy = false, i, k, v;
+  for(i=0;i<order.length;i++){
+    k = order[i]; v = parts[i];
+    if(SET_FOR[k] && SET_FOR[k][v]) next[k] = v; else fuzzy = true;
+  }
+  for(i=0;i<COLOR_ORDER.length;i++){
+    k = COLOR_ORDER[i]; v = parts[order.length + i];
+    if(/^[0-9a-fA-F]{6}$/.test(v)) next[k] = "#"+v.toLowerCase(); else fuzzy = true;
+  }
+  next.fuzzy = fuzzy;
+  return next;
+}
+
+/* ---------- randomiser ---------- */
+function randOf(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function randomiseColors(st){
+  for(var k in COLOR_FIELDS) st[colorKey(k)] = randOf(COLOR_FIELDS[k].palette);
+  /* keep things readable: hair, hat and clothes shouldn't melt into the backdrop */
+  if(Math.abs(lum(st.hair) - lum(st.bg1)) < 0.14) st.hair = lum(st.bg1) > 0.5 ? "#2b2145" : "#e8c26a";
+  if(st.hatC === st.cloth) st.cloth = randOf(COLOR_FIELDS.cloth.palette);
+  if(st.cloth2 === st.cloth) st.cloth2 = lum(st.cloth) > 0.5 ? "#2b2145" : "#ffffff";
+  return st;
+}
+
+/* =====================================================================
+   SOUND — everything is synthesised on the spot, no files to load
+   ===================================================================== */
+var Snd = (function(){
+  var AC = null, master = null, noiseBuf = null, on = true, vol = 0.55;
+  var SCALE = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
+
+  function ctx(){
+    if(AC === false) return null;
+    if(!AC){
+      try{
+        var Ctor = (typeof window !== "undefined") && (window.AudioContext || window.webkitAudioContext);
+        if(!Ctor){ AC = false; return null; }
+        AC = new Ctor();
+        master = AC.createGain();
+        master.gain.value = vol;
+        master.connect(AC.destination);
+      }catch(e){ AC = false; return null; }
+    }
+    try{ if(AC.state === "suspended" && AC.resume) AC.resume(); }catch(e){}
+    return AC;
+  }
+  function tone(o){
+    if(!on) return;
+    var a = ctx(); if(!a) return;
+    var t0 = a.currentTime + (o.at || 0);
+    var dur = o.dur || 0.12;
+    var osc = a.createOscillator(), g = a.createGain();
+    osc.type = o.type || "triangle";
+    osc.frequency.setValueAtTime(o.f, t0);
+    if(o.to) osc.frequency.exponentialRampToValueAtTime(Math.max(40, o.to), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(o.g === undefined ? 0.28 : o.g, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g); g.connect(master);
+    osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
+  function hiss(o){
+    if(!on) return;
+    var a = ctx(); if(!a) return;
+    if(!noiseBuf){
+      noiseBuf = a.createBuffer(1, Math.floor(a.sampleRate * 0.4), a.sampleRate);
+      var d = noiseBuf.getChannelData(0), i;
+      for(i=0;i<d.length;i++) d[i] = Math.random()*2 - 1;
+    }
+    var t0 = a.currentTime + (o.at || 0), dur = o.dur || 0.14;
+    var src = a.createBufferSource(); src.buffer = noiseBuf;
+    var f = a.createBiquadFilter();
+    f.type = o.filter || "bandpass";
+    f.frequency.setValueAtTime(o.f || 1400, t0);
+    if(o.to) f.frequency.exponentialRampToValueAtTime(Math.max(80, o.to), t0 + dur);
+    f.Q.value = o.q || 1.2;
+    var g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(o.g === undefined ? 0.22 : o.g, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(f); f.connect(g); g.connect(master);
+    src.start(t0); src.stop(t0 + dur + 0.03);
+  }
+
+  return {
+    isOn: function(){ return on; },
+    setOn: function(v){ on = !!v; if(on) ctx(); },
+    setVol: function(v){ vol = v; if(master) master.gain.value = v; },
+    /* a tap on a part, pitched by its place in the row */
+    blip: function(i){ tone({ f: SCALE[Math.abs(i||0) % SCALE.length], dur:0.09, g:0.22, type:"triangle" }); },
+    pop:  function(){ tone({ f:660, to:330, dur:0.1, g:0.2, type:"sine" }); },
+    plink:function(hex){
+      var c = hex2rgb(hex||"#888888");
+      var f = 420 + ((c[0]*2 + c[1]*3 + c[2]) % 520);
+      tone({ f:f, dur:0.13, g:0.2, type:"sine" });
+      tone({ f:f*1.5, dur:0.09, g:0.08, type:"sine", at:0.03 });
+    },
+    shuffle: function(){
+      for(var i=0;i<6;i++) tone({ f: SCALE[Math.floor(Math.random()*SCALE.length)], dur:0.08, g:0.16, at:i*0.055, type:"square" });
+    },
+    chime: function(){
+      tone({ f:784, dur:0.2, g:0.22, type:"sine" });
+      tone({ f:1046.5, dur:0.3, g:0.18, type:"sine", at:0.09 });
+    },
+    shutter: function(){
+      hiss({ f:2600, to:700, dur:0.09, g:0.26 });
+      tone({ f:180, to:90, dur:0.07, g:0.2, type:"square", at:0.05 });
+    },
+    whoosh: function(){ hiss({ f:300, to:2400, dur:0.22, g:0.12, filter:"bandpass", q:0.8 }); },
+    tick: function(){ tone({ f:880, dur:0.05, g:0.14, type:"square" }); },
+    err: function(){
+      tone({ f:200, dur:0.1, g:0.2, type:"sawtooth" });
+      tone({ f:150, dur:0.14, g:0.2, type:"sawtooth", at:0.11 });
+    },
+    boop: function(){
+      tone({ f:392, to:784, dur:0.12, g:0.25, type:"sine" });
+      tone({ f:1175, dur:0.14, g:0.14, type:"triangle", at:0.1 });
+    }
+  };
+})();
+
+/* =====================================================================
+   STORAGE — falls back to memory when the browser says no
+   ===================================================================== */
+var store = (function(){
+  var mem = {}, ok = false;
+  try{
+    var probe = "__mm_probe";
+    window.localStorage.setItem(probe, "1");
+    window.localStorage.removeItem(probe);
+    ok = true;
+  }catch(e){ ok = false; }
+  return {
+    ok: ok,
+    get: function(k){ try{ return ok ? window.localStorage.getItem(k) : (k in mem ? mem[k] : null); }catch(e){ return mem[k] || null; } },
+    set: function(k,v){ try{ if(ok) window.localStorage.setItem(k,v); else mem[k]=v; }catch(e){ mem[k]=v; } },
+    del: function(k){ try{ if(ok) window.localStorage.removeItem(k); else delete mem[k]; }catch(e){ delete mem[k]; } }
+  };
+})();
+var KEY = { shelf:"memake.shelf", last:"memake.last", cfg:"memake.cfg" };
+
+/* =====================================================================
+   INTERFACE
+   ===================================================================== */
+var current = CATS[0].key, exportSize = 1024, thumbSeq = 0;
+var charName = "", locks = {}, filter = "";
+var cfg = { sound:true, vol:0.55, theme:"day", anim:true, shape:"square", zoom:"full", nameOn:false, trans:false };
+
+function $(id){ return document.getElementById(id); }
+function catByKey(k){ for(var i=0;i<CATS.length;i++) if(CATS[i].key===k) return CATS[i]; return CATS[0]; }
+function catIndex(k){ for(var i=0;i<CATS.length;i++) if(CATS[i].key===k) return i; return 0; }
+function stageOpts(){
+  return { shape:cfg.shape, zoom:cfg.zoom, name:charName, showName:cfg.nameOn, alt:(charName||"Your MeMake character") };
+}
+
+/* ---------- toasts ---------- */
+function toast(msg, bad){
+  var box = $("toasts");
+  if(!box) return;
+  var t = document.createElement("div");
+  t.className = "toast" + (bad ? " bad" : "");
+  t.textContent = msg;
+  box.appendChild(t);
+  setTimeout(function(){
+    t.style.transition = "opacity .3s ease";
+    t.style.opacity = "0";
+    setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 320);
+  }, 2200);
+  while(box.children.length > 3) box.removeChild(box.firstChild);
+}
+
+/* ---------- history ---------- */
+var hist = [], hi = -1;
+function snap(){ return encodeState(state) + "|" + charName; }
+function applySnap(s){
+  var p = String(s).split("|"), st = decodeState(p[0]);
+  if(st){ delete st.fuzzy; state = st; }
+  charName = p[1] || "";
+  if($("nameInput")) $("nameInput").value = charName;
+}
+function pushHistory(){
+  var s = snap();
+  if(hist[hi] === s) return;
+  hist = hist.slice(0, hi+1);
+  hist.push(s);
+  if(hist.length > 80) hist.shift();
+  hi = hist.length - 1;
+  updateUndo();
+  store.set(KEY.last, s);
+}
+function updateUndo(){
+  if($("undoBtn")) $("undoBtn").disabled = hi <= 0;
+  if($("redoBtn")) $("redoBtn").disabled = hi >= hist.length - 1;
+}
+function undo(){
+  if(hi <= 0){ Snd.err(); toast("Nothing left to undo", true); return; }
+  hi--; applySnap(hist[hi]); refresh(); Snd.tick(); updateUndo();
+}
+function redo(){
+  if(hi >= hist.length - 1){ Snd.err(); toast("Nothing to redo", true); return; }
+  hi++; applySnap(hist[hi]); refresh(); Snd.tick(); updateUndo();
+}
+
+/* ---------- drawing the page ---------- */
+function drawStage(){
+  $("stage").innerHTML = svgMarkup(state, "main", VIEWS[cfg.zoom], stageOpts());
+  $("codeInput").value = encodeState(state);
+}
+function buildChips(){
+  var box = $("chips"), i, b;
+  box.innerHTML = "";
+  for(i=0;i<CATS.length;i++){
+    b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.innerHTML = CATS[i].label + (locks[CATS[i].key] ? ' <span class="lk">&#128274;</span>' : "");
+    b.setAttribute("role","tab");
+    b.setAttribute("aria-selected", CATS[i].key===current ? "true" : "false");
+    b.dataset.cat = CATS[i].key;
+    box.appendChild(b);
+  }
+}
+function idsFor(cat){
+  var ids = Object.keys(cat.set);
+  if(!filter) return ids;
+  var f = filter.toLowerCase();
+  return ids.filter(function(id){ return (cat.set[id].name || id).toLowerCase().indexOf(f) >= 0; });
+}
+var canHover = false, hoverId = null;
+function buildTiles(){
+  var cat = catByKey(current), box = $("tiles"), ids = idsFor(cat), i, id, b, temp;
+  var had = document.activeElement, keep = had && had.className === "tile" ? had.dataset.id : null;
+  box.innerHTML = "";
+  if(!ids.length){
+    box.innerHTML = '<p class="empty">No part here matches that. Clear the search to see all '+Object.keys(cat.set).length+'.</p>';
+  }
+  for(i=0;i<ids.length;i++){
+    id = ids[i];
+    temp = cloneState(state);
+    temp[stateKey(cat.field)] = id;
+    b = document.createElement("button");
+    b.type = "button";
+    b.className = "tile";
+    b.dataset.id = id;
+    b.dataset.i = i;
+    b.setAttribute("aria-pressed", state[stateKey(cat.field)]===id ? "true" : "false");
+    b.innerHTML = svgMarkup(temp, "t"+(thumbSeq++), cat.vb, {})
+      + '<span class="cap">'+cat.set[id].name+'</span>';
+    box.appendChild(b);
+  }
+  if(keep){
+    var again = box.querySelector('.tile[data-id="'+keep+'"]');
+    if(again) again.focus();
+  }
+  $("count").textContent = ids.length + (ids.length === 1 ? " part" : " parts");
+  $("lockBtn").innerHTML = locks[current] ? "&#128274;" : "&#128275;";
+  $("lockBtn").setAttribute("aria-pressed", locks[current] ? "true" : "false");
+}
+function buildColors(){
+  var cat = catByKey(current), box = $("colors"), i;
+  box.innerHTML = "";
+  if(!cat.colors.length){
+    box.innerHTML = '<p class="empty">This part uses the colours you picked elsewhere.</p>';
+    return;
+  }
+  for(i=0;i<cat.colors.length;i++) box.appendChild(colorRow(cat.colors[i]));
+}
+function colorRow(k){
+  var def = COLOR_FIELDS[k], sk = colorKey(k), row, lab, j, b, inp;
+  row = document.createElement("div");
+  row.className = "crow";
+  lab = document.createElement("span");
+  lab.className = "lab";
+  lab.textContent = def.label;
+  row.appendChild(lab);
+  for(j=0;j<def.palette.length;j++){
+    b = document.createElement("button");
+    b.type = "button";
+    b.className = "sw";
+    b.style.background = def.palette[j];
+    b.dataset.color = def.palette[j];
+    b.dataset.field = sk;
+    b.setAttribute("aria-label", def.label+" "+def.palette[j]);
+    b.setAttribute("aria-pressed", state[sk].toLowerCase()===def.palette[j].toLowerCase() ? "true":"false");
+    row.appendChild(b);
+  }
+  inp = document.createElement("input");
+  inp.type = "color";
+  inp.value = state[sk];
+  inp.dataset.field = sk;
+  inp.setAttribute("aria-label","Custom "+def.label.toLowerCase()+" colour");
+  row.appendChild(inp);
+  return row;
+}
+function buildQuick(){
+  var i, b;
+  var looks = $("looks"), moods = $("moods"), pals = $("palettes");
+  looks.innerHTML = ""; moods.innerHTML = ""; pals.innerHTML = "";
+  for(i=0;i<LOOKS.length;i++){
+    b = document.createElement("button");
+    b.type="button"; b.className="pill"; b.textContent = LOOKS[i].name; b.dataset.look = i;
+    looks.appendChild(b);
+  }
+  for(i=0;i<MOODS.length;i++){
+    b = document.createElement("button");
+    b.type="button"; b.className="pill"; b.textContent = MOODS[i].name; b.dataset.mood = i;
+    moods.appendChild(b);
+  }
+  for(i=0;i<PALETTES.length;i++){
+    b = document.createElement("button");
+    b.type="button"; b.className="pill"; b.textContent = PALETTES[i].name; b.dataset.pal = i;
+    b.style.boxShadow = "inset 0 -6px 0 " + PALETTES[i].c.bg2;
+    pals.appendChild(b);
+  }
+}
+var tileJob = 0;
+function refresh(){
+  drawStage();
+  buildTiles();
+  buildColors();
+  buildChips();
+}
+function quickRefresh(){        /* live colour dragging — stage only, tiles catch up after */
+  drawStage();
+  if(tileJob) cancelAnimationFrame(tileJob);
+  tileJob = requestAnimationFrame(function(){ tileJob = 0; buildTiles(); });
+}
+
+/* ---------- presets ---------- */
+function mergeState(patch){
+  for(var k in patch) if(k in state) state[k] = patch[k];
+}
+function applyLook(i){
+  var L = LOOKS[i]; if(!L) return;
+  mergeState(L.s);
+  pushHistory(); refresh();
+  Snd.chime(); toast(L.name + " it is");
+}
+function applyMood(i){
+  var M = MOODS[i]; if(!M) return;
+  mergeState(M.s);
+  pushHistory(); refresh();
+  Snd.pop(); toast("Feeling " + M.name.toLowerCase());
+}
+function applyPalette(i){
+  var Pp = PALETTES[i]; if(!Pp) return;
+  mergeState(Pp.c);
+  pushHistory(); refresh();
+  Snd.plink(Pp.c.bg2); toast(Pp.name + " palette");
+}
+
+/* ---------- randomiser ---------- */
+function randomise(){
+  var i, cat, changed = 0;
+  for(i=0;i<CATS.length;i++){
+    cat = CATS[i];
+    if(locks[cat.key]) continue;
+    state[stateKey(cat.field)] = randOf(Object.keys(cat.set));
+    changed++;
+  }
+  if(!locks.bg && state.bg === "none" && Math.random() < 0.8) state.bg = "fade";
+  if(Math.random() < 0.55) state.buddy = "none";
+  randomiseColors(state);
+  pushHistory(); refresh();
+  Snd.shuffle();
+  toast(changed ? "Rolled a new one" : "Everything is locked");
+}
+function shuffleColors(){
+  randomiseColors(state);
+  pushHistory(); refresh();
+  Snd.plink(state.bg2); toast("New colours");
+}
+function randomPart(){
+  var cat = catByKey(current), ids = Object.keys(cat.set);
+  state[stateKey(cat.field)] = randOf(ids);
+  pushHistory(); refresh();
+  Snd.blip(Math.floor(Math.random()*6));
+}
+function stepPart(dir){
+  var cat = catByKey(current), ids = Object.keys(cat.set);
+  var at = ids.indexOf(state[stateKey(cat.field)]);
+  at = (at + dir + ids.length) % ids.length;
+  state[stateKey(cat.field)] = ids[at];
+  pushHistory(); refresh();
+  Snd.blip(at);
+}
+function goCat(i){
+  current = CATS[(i + CATS.length) % CATS.length].key;
+  filter = ""; $("search").value = "";
+  buildChips(); buildTiles(); buildColors();
+  Snd.pop();
+}
+function reset(){
+  state = cloneState(DEFAULT_STATE);
+  charName = ""; $("nameInput").value = "";
+  pushHistory(); refresh();
+  Snd.whoosh(); toast("Back to the start — Ctrl+Z brings it back");
+}
+
+/* ---------- confetti + boop ---------- */
+function sparkle(n){
+  var stage = $("stage"), i, s, glyphs = ["\u2728","\u2b50","\u2764","\u2734"];
+  for(i=0;i<n;i++){
+    s = document.createElement("span");
+    s.className = "spark";
+    s.textContent = glyphs[i % glyphs.length];
+    s.style.left = (18 + Math.random()*64) + "%";
+    s.style.top  = (30 + Math.random()*50) + "%";
+    s.style.animationDelay = (i*0.06) + "s";
+    stage.appendChild(s);
+    (function(el){ setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 1200); })(s);
+  }
+}
+function boop(){
+  var stage = $("stage");
+  stage.classList.remove("boop");
+  void stage.offsetWidth;
+  stage.classList.add("boop");
+  Snd.boop();
+  sparkle(2);
+}
+
+/* ---------- saving pictures ---------- */
+function exportSVGString(size){
+  var s = svgMarkup(state, "save", VIEWS[cfg.zoom], {
+    shape:cfg.shape, zoom:cfg.zoom, name:charName, showName:cfg.nameOn,
+    transparent:cfg.trans, alt:(charName||"MeMake character")
+  });
+  return s.replace("<svg ", '<svg width="'+size+'" height="'+size+'" ');
+}
+function fileName(ext){
+  var base = charName.replace(/[^a-z0-9 _-]/gi,"").trim().replace(/\s+/g,"-");
+  return "MeMake-" + (base || encodeState(state).slice(0,20)) + "." + ext;
+}
+function saveBlob(blob, name){
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+}
+function renderPNG(cb, fail){
+  var size = exportSize;
+  var src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(exportSVGString(size));
+  var img = new Image();
+  img.onload = function(){
+    var cv = document.createElement("canvas");
+    cv.width = size; cv.height = size;
+    var ctx2 = cv.getContext("2d");
+    ctx2.drawImage(img, 0, 0, size, size);
+    if(cv.toBlob) cv.toBlob(function(b){ b ? cb(b, size, cv) : fail(); }, "image/png");
+    else fail(cv);
+  };
+  img.onerror = function(){ fail(); };
+  img.src = src;
+}
+function savePNG(){
+  renderPNG(function(blob, size){
+    saveBlob(blob, fileName("png"));
+    Snd.shutter(); sparkle(4);
+    toast("Saved a " + size + "px PNG");
+  }, function(cv){
+    if(cv && cv.toDataURL){
+      var a = document.createElement("a");
+      a.href = cv.toDataURL("image/png"); a.download = fileName("png"); a.click();
+      toast("Saved a PNG");
+    } else { Snd.err(); toast("That picture didn't render — try the SVG", true); }
+  });
+}
+function saveSVG(){
+  saveBlob(new Blob([exportSVGString(1024)], {type:"image/svg+xml"}), fileName("svg"));
+  Snd.chime(); toast("Saved an SVG you can scale to any size");
+}
+function copyImage(){
+  if(!(navigator.clipboard && window.ClipboardItem)){
+    Snd.err(); toast("This browser won't copy images — use Save PNG", true); return;
+  }
+  renderPNG(function(blob){
+    navigator.clipboard.write([new window.ClipboardItem({"image/png": blob})]).then(function(){
+      Snd.chime(); toast("Picture copied — paste it anywhere");
+    }, function(){
+      Snd.err(); toast("The browser blocked the copy — use Save PNG", true);
+    });
+  }, function(){ Snd.err(); toast("Couldn't build that picture", true); });
+}
+
+/* ---------- the shelf ---------- */
+var shelf = [];
+function loadShelf(){
+  try{ shelf = JSON.parse(store.get(KEY.shelf) || "[]") || []; }catch(e){ shelf = []; }
+  if(!(shelf instanceof Array)) shelf = [];
+}
+function saveShelf(){ store.set(KEY.shelf, JSON.stringify(shelf)); }
+function renderShelf(){
+  var box = $("shelfGrid"), i, it, st, card;
+  box.innerHTML = "";
+  $("shelfEmpty").style.display = shelf.length ? "none" : "block";
+  for(i=0;i<shelf.length;i++){
+    it = shelf[i];
+    st = decodeState(it.code);
+    if(!st) continue;
+    card = document.createElement("div");
+    card.style.position = "relative";
+    card.innerHTML = '<button type="button" class="card" data-load="'+i+'" title="Load this one">'
+      + svgMarkup(st, "sh"+i, "0 0 400 400", {})
+      + '<span class="nm">'+esc(it.name || "Unnamed")+'</span></button>'
+      + '<button type="button" class="x" data-del="'+i+'" aria-label="Remove '+esc(it.name||"this one")+'">&#10005;</button>';
+    box.appendChild(card);
+  }
+}
+function addToShelf(){
+  var nm = charName.trim() || ("Number " + (shelf.length + 1));
+  shelf.unshift({ code: encodeState(state), name: nm, at: Date.now() });
+  if(shelf.length > 60) shelf.length = 60;
+  saveShelf(); renderShelf();
+  Snd.chime(); sparkle(3);
+  toast(store.ok ? ("Put " + nm + " on the shelf") : ("Added " + nm + " — this browser won't keep it after a reload"));
+}
+function loadFromShelf(i){
+  var it = shelf[i]; if(!it) return;
+  var st = decodeState(it.code);
+  if(!st){ Snd.err(); toast("That one wouldn't load", true); return; }
+  delete st.fuzzy;
+  state = st; charName = it.name || "";
+  $("nameInput").value = charName;
+  pushHistory(); refresh();
+  Snd.whoosh(); toast("Loaded " + (it.name || "it"));
+}
+function delFromShelf(i){
+  var it = shelf[i]; if(!it) return;
+  shelf.splice(i,1); saveShelf(); renderShelf();
+  Snd.tick(); toast("Took " + (it.name || "it") + " off the shelf");
+}
+function exportShelf(){
+  if(!shelf.length){ Snd.err(); toast("The shelf is empty", true); return; }
+  saveBlob(new Blob([JSON.stringify({ app:"MeMake", version:2, items:shelf }, null, 2)], {type:"application/json"}), "MeMake-shelf.json");
+  Snd.chime(); toast("Shelf exported");
+}
+function importShelf(file){
+  var r = new FileReader();
+  r.onload = function(){
+    var data, added = 0, i;
+    try{ data = JSON.parse(r.result); }catch(e){ Snd.err(); toast("That file isn't a MeMake shelf", true); return; }
+    var items = (data && data.items) || (data instanceof Array ? data : null);
+    if(!items){ Snd.err(); toast("That file isn't a MeMake shelf", true); return; }
+    for(i=0;i<items.length;i++){
+      if(items[i] && items[i].code && decodeState(items[i].code)){
+        shelf.unshift({ code:items[i].code, name:items[i].name || "Unnamed", at:items[i].at || Date.now() });
+        added++;
+      }
+    }
+    if(shelf.length > 60) shelf.length = 60;
+    saveShelf(); renderShelf();
+    if(added){ Snd.chime(); toast("Added " + added + (added === 1 ? " character" : " characters")); }
+    else { Snd.err(); toast("Nothing in there could be read", true); }
+  };
+  r.readAsText(file);
+}
+
+/* ---------- settings ---------- */
+function loadCfg(){
+  var raw = store.get(KEY.cfg), o, k;
+  if(raw){ try{ o = JSON.parse(raw); for(k in o) if(k in cfg) cfg[k] = o[k]; }catch(e){} }
+  Snd.setOn(cfg.sound); Snd.setVol(cfg.vol);
+  document.documentElement.setAttribute("data-theme", cfg.theme);
+  $("vol").value = Math.round(cfg.vol * 100);
+  $("soundBtn").innerHTML = cfg.sound ? "&#128266;" : "&#128263;";
+  $("themeBtn").innerHTML = cfg.theme === "night" ? "&#9728;" : "&#127769;";
+  $("nameOnPic").checked = !!cfg.nameOn;
+  $("transBg").checked = !!cfg.trans;
+  $("stage").classList.toggle("anim", cfg.anim !== false);
+  segSet("shapeSeg","shape",cfg.shape);
+  segSet("zoomSeg","zoom",cfg.zoom);
+}
+function saveCfg(){ store.set(KEY.cfg, JSON.stringify(cfg)); }
+function segSet(id, attr, val){
+  var seg = $(id); if(!seg) return;
+  Array.prototype.forEach.call(seg.querySelectorAll("button"), function(b){
+    b.setAttribute("aria-pressed", b.dataset[attr] === String(val) ? "true" : "false");
+  });
+}
+
+/* ---------- links ---------- */
+function shareLink(){
+  var url = location.href.split("#")[0] + "#c=" + encodeState(state)
+          + (charName ? "&n=" + encodeURIComponent(charName) : "");
+  copyText(url, "Link copied — it opens straight to this character");
+}
+function copyText(text, okMsg){
+  function fallback(){
+    var inp = $("codeInput"), old = inp.value;
+    inp.value = text; inp.select();
+    try{ document.execCommand("copy"); Snd.chime(); toast(okMsg); }
+    catch(e){ Snd.err(); toast("Press Ctrl+C to copy the selected text", true); }
+    setTimeout(function(){ inp.value = old; }, 50);
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){ Snd.chime(); toast(okMsg); }, fallback);
+  } else fallback();
+}
+function readHash(){
+  var h = location.hash.replace(/^#/,"");
+  if(!h) return false;
+  var m = /(?:^|&)c=([^&]+)/.exec(h);
+  if(!m) return false;
+  var st = decodeState(decodeURIComponent(m[1]));
+  if(!st) return false;
+  delete st.fuzzy;
+  state = st;
+  var n = /(?:^|&)n=([^&]*)/.exec(h);
+  if(n){ try{ charName = decodeURIComponent(n[1]).slice(0,22); }catch(e){} }
+  return true;
+}
+
+/* ---------- events ---------- */
+function init(){
+  loadCfg();
+  loadShelf();
+  buildQuick();
+
+  if(!readHash()){
+    var last = store.get(KEY.last);
+    if(last) applySnap(last);
+  }
+  $("nameInput").value = charName;
+  if(!store.ok) $("storeNote").textContent = "Heads up: this browser isn't letting the page remember your shelf between visits, so export the file if you want to keep it.";
+
+  buildChips();
+  refresh();
+  renderShelf();
+  pushHistory();
+
+  $("chips").addEventListener("click", function(e){
+    var b = e.target.closest(".chip");
+    if(!b) return;
+    current = b.dataset.cat;
+    filter = ""; $("search").value = "";
+    buildChips(); buildTiles(); buildColors();
+    Snd.pop();
+  });
+
+  $("tiles").addEventListener("click", function(e){
+    var b = e.target.closest(".tile");
+    if(!b) return;
+    hoverId = null;
+    state[stateKey(catByKey(current).field)] = b.dataset.id;
+    pushHistory(); refresh();
+    Snd.blip(parseInt(b.dataset.i,10) || 0);
+  });
+
+  canHover = !!(window.matchMedia && window.matchMedia("(hover: hover)").matches);
+  $("tiles").addEventListener("mouseover", function(e){
+    if(!canHover) return;
+    var b = e.target.closest(".tile");
+    if(!b || b.dataset.id === hoverId) return;
+    hoverId = b.dataset.id;
+    var temp = cloneState(state);
+    temp[stateKey(catByKey(current).field)] = hoverId;
+    $("stage").innerHTML = svgMarkup(temp, "hov", VIEWS[cfg.zoom], stageOpts());
+  });
+  $("tiles").addEventListener("mouseleave", function(){
+    if(!canHover || hoverId === null) return;
+    hoverId = null; drawStage();
+  });
+
+  $("colors").addEventListener("click", function(e){
+    var b = e.target.closest(".sw");
+    if(!b) return;
+    state[b.dataset.field] = b.dataset.color;
+    pushHistory(); refresh();
+    Snd.plink(b.dataset.color);
+  });
+  $("colors").addEventListener("input", function(e){
+    if(e.target.type !== "color") return;
+    state[e.target.dataset.field] = e.target.value;
+    quickRefresh();
+  });
+  $("colors").addEventListener("change", function(e){
+    if(e.target.type !== "color") return;
+    pushHistory();
+    Snd.plink(e.target.value);
+  });
+
+  $("looks").addEventListener("click", function(e){
+    var b = e.target.closest(".pill"); if(b) applyLook(+b.dataset.look);
+  });
+  $("moods").addEventListener("click", function(e){
+    var b = e.target.closest(".pill"); if(b) applyMood(+b.dataset.mood);
+  });
+  $("palettes").addEventListener("click", function(e){
+    var b = e.target.closest(".pill"); if(b) applyPalette(+b.dataset.pal);
+  });
+
+  $("search").addEventListener("input", function(){
+    filter = this.value.trim();
+    buildTiles();
+  });
+  $("prevBtn").addEventListener("click", function(){ stepPart(-1); });
+  $("nextBtn").addEventListener("click", function(){ stepPart(1); });
+  $("diceBtn").addEventListener("click", randomPart);
+  $("lockBtn").addEventListener("click", function(){
+    locks[current] = !locks[current];
+    buildChips(); buildTiles();
+    Snd.tick();
+    toast(locks[current] ? (catByKey(current).label + " is locked") : (catByKey(current).label + " is open again"));
+  });
+
+  $("sizeSeg").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    exportSize = parseInt(b.dataset.size,10);
+    segSet("sizeSeg","size",exportSize);
+    Snd.tick();
+  });
+  $("shapeSeg").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    cfg.shape = b.dataset.shape; segSet("shapeSeg","shape",cfg.shape); saveCfg();
+    drawStage(); Snd.tick();
+  });
+  $("zoomSeg").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    cfg.zoom = b.dataset.zoom; segSet("zoomSeg","zoom",cfg.zoom); saveCfg();
+    drawStage(); Snd.tick();
+  });
+  $("transBg").addEventListener("change", function(){
+    cfg.trans = this.checked; saveCfg();
+    toast(cfg.trans ? "Saved pictures will have no backdrop" : "Backdrop is back in saved pictures");
+  });
+  $("nameOnPic").addEventListener("change", function(){
+    cfg.nameOn = this.checked; saveCfg(); drawStage();
+  });
+  $("nameInput").addEventListener("input", function(){
+    charName = this.value;
+    if(cfg.nameOn) drawStage();
+  });
+  $("nameInput").addEventListener("change", pushHistory);
+
+  $("randomBtn").addEventListener("click", randomise);
+  $("resetBtn").addEventListener("click", reset);
+  $("undoBtn").addEventListener("click", undo);
+  $("redoBtn").addEventListener("click", redo);
+  $("pngBtn").addEventListener("click", savePNG);
+  $("svgBtn").addEventListener("click", saveSVG);
+  $("clipBtn").addEventListener("click", copyImage);
+  $("shelfAddBtn").addEventListener("click", addToShelf);
+  $("linkBtn").addEventListener("click", shareLink);
+
+  $("copyBtn").addEventListener("click", function(){
+    copyText(encodeState(state), "Code copied");
+  });
+  $("loadBtn").addEventListener("click", function(){
+    var st = decodeState($("codeInput").value);
+    if(!st){ Snd.err(); toast("That code has the wrong number of chunks", true); drawStage(); return; }
+    var fuzzy = st.fuzzy; delete st.fuzzy;
+    state = st;
+    pushHistory(); refresh();
+    Snd.whoosh();
+    toast(fuzzy ? "Loaded, but some parts weren't recognised" : "Character loaded", !!fuzzy);
+  });
+  $("codeInput").addEventListener("keydown", function(e){
+    if(e.key === "Enter") $("loadBtn").click();
+  });
+
+  $("shelfGrid").addEventListener("click", function(e){
+    var d = e.target.closest("[data-del]"), l = e.target.closest("[data-load]");
+    if(d) delFromShelf(+d.dataset.del);
+    else if(l) loadFromShelf(+l.dataset.load);
+  });
+  $("shelfExport").addEventListener("click", exportShelf);
+  $("shelfImport").addEventListener("click", function(){ $("shelfFile").click(); });
+  $("shelfFile").addEventListener("change", function(){
+    if(this.files && this.files[0]) importShelf(this.files[0]);
+    this.value = "";
+  });
+
+  $("stage").addEventListener("click", boop);
+
+  $("soundBtn").addEventListener("click", function(){
+    cfg.sound = !cfg.sound; Snd.setOn(cfg.sound); saveCfg();
+    this.innerHTML = cfg.sound ? "&#128266;" : "&#128263;";
+    if(cfg.sound) Snd.chime();
+    toast(cfg.sound ? "Sound on" : "Sound off");
+  });
+  $("vol").addEventListener("input", function(){
+    cfg.vol = (+this.value)/100; Snd.setVol(cfg.vol);
+  });
+  $("vol").addEventListener("change", function(){ saveCfg(); Snd.blip(3); });
+  $("themeBtn").addEventListener("click", function(){
+    cfg.theme = cfg.theme === "night" ? "day" : "night";
+    document.documentElement.setAttribute("data-theme", cfg.theme);
+    this.innerHTML = cfg.theme === "night" ? "&#9728;" : "&#127769;";
+    saveCfg(); Snd.whoosh();
+  });
+  $("helpBtn").addEventListener("click", function(){ $("helpVeil").hidden = false; Snd.pop(); });
+  $("helpClose").addEventListener("click", function(){ $("helpVeil").hidden = true; });
+  $("helpVeil").addEventListener("click", function(e){ if(e.target === this) this.hidden = true; });
+
+  segSet("sizeSeg","size",exportSize);
+
+  document.addEventListener("keydown", function(e){
+    var t = e.target, typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+    var mod = e.ctrlKey || e.metaKey;
+
+    if(mod && (e.key === "z" || e.key === "Z")){
+      e.preventDefault();
+      if(e.shiftKey) redo(); else undo();
+      return;
+    }
+    if(mod && (e.key === "y" || e.key === "Y")){ e.preventDefault(); redo(); return; }
+    if(e.key === "Escape"){ $("helpVeil").hidden = true; if(typing) t.blur(); return; }
+    if(typing || mod || e.altKey) return;
+
+    if(e.key === "/"){ e.preventDefault(); $("search").focus(); return; }
+    if(e.key === "?"){ e.preventDefault(); $("helpVeil").hidden = !$("helpVeil").hidden; return; }
+    if(e.key === "ArrowLeft"){ e.preventDefault(); stepPart(-1); return; }
+    if(e.key === "ArrowRight"){ e.preventDefault(); stepPart(1); return; }
+    if(e.key === "ArrowUp"){ e.preventDefault(); goCat(catIndex(current)-1); return; }
+    if(e.key === "ArrowDown"){ e.preventDefault(); goCat(catIndex(current)+1); return; }
+    if(e.key >= "1" && e.key <= "9"){ goCat(parseInt(e.key,10)-1); return; }
+    if(e.key === "0"){ goCat(9); return; }
+
+    switch(e.key){
+      case "r": randomise(); break;
+      case "R": shuffleColors(); break;
+      case "d": case "D": randomPart(); break;
+      case "l": case "L": $("lockBtn").click(); break;
+      case "s": case "S": savePNG(); break;
+      case "a": case "A": addToShelf(); break;
+      case "m": case "M": $("soundBtn").click(); break;
+      case "n": case "N": $("themeBtn").click(); break;
+    }
+  });
+
+  window.addEventListener("hashchange", function(){
+    if(readHash()){ $("nameInput").value = charName; pushHistory(); refresh(); toast("Loaded from the link"); }
+  });
+}
+
+if(typeof document !== "undefined"){
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
+}
+
+/* exposed for testing */
+var API = {
+  buildSVG:buildSVG, svgMarkup:svgMarkup, CATS:CATS, LOOKS:LOOKS, MOODS:MOODS, PALETTES:PALETTES,
+  encodeState:encodeState, decodeState:decodeState, DEFAULT_STATE:DEFAULT_STATE,
+  state:function(){ return state; }, setState:function(s){ state = s; }, stateKey:stateKey
+};
+if(typeof window !== "undefined") window.MeMake = API;
+else if(typeof globalThis !== "undefined") globalThis.MeMake = API;
+})();
+</script>
+</body>
+</html>
