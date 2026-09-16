@@ -226,6 +226,58 @@
     border:2px solid var(--ink);border-radius:7px;padding:1px 7px;font:inherit;font-size:13px;font-weight:600;
     background:var(--tile);box-shadow:0 2px 0 var(--ink);white-space:nowrap;
   }
+
+  /* ---------- studio ---------- */
+  .st-board{grid-template-columns:minmax(290px,430px) 1fr}
+  .st-canvas{
+    position:relative;touch-action:none;-webkit-user-select:none;user-select:none;
+    background:var(--tile);border:3px solid var(--ink);border-radius:16px;padding:6px;
+    background-image:linear-gradient(45deg,var(--check2) 25%,transparent 25%),linear-gradient(-45deg,var(--check2) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--check2) 75%),linear-gradient(-45deg,transparent 75%,var(--check2) 75%);
+    background-size:22px 22px;background-position:0 0,0 11px,11px -11px,-11px 0;
+  }
+  .st-canvas svg{display:block;width:100%;height:auto;border-radius:11px}
+  .st-canvas.pen{cursor:crosshair}
+  .st-canvas.erase{cursor:not-allowed}
+  .jd{fill:var(--panel);stroke:#2b2145;stroke-width:3.5;cursor:grab}
+  .jd:hover{fill:var(--mint)}
+  .jd.root{fill:var(--sun)}
+  .jd.tilt{fill:var(--coral)}
+  .selbox{fill:none;stroke:#3fd6a4;stroke-width:2.5;stroke-dasharray:8 6}
+  .selh{fill:var(--panel);stroke:#3fd6a4;stroke-width:3;cursor:nwse-resize}
+  .selh.rot{cursor:grab;fill:var(--sun)}
+  .penline{fill:none;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+  .st-sel{margin-top:13px;padding-top:12px;border-top:3px dashed var(--soft)}
+  .st-panel[hidden]{display:none}
+  .st-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:11px}
+  .st-row > .lab{font-size:13px;font-weight:600;min-width:78px;opacity:.85}
+  .st-row .pills,.st-row .chips{flex:1 1 200px;margin:0}
+  .st-row input[type=text]{
+    flex:1 1 130px;border:3px solid var(--ink);border-radius:999px;padding:7px 13px;
+    font:inherit;font-size:14px;background:var(--field);color:var(--ink);min-width:0;
+  }
+  .sl{flex:1 1 130px;accent-color:var(--mint);cursor:pointer;min-width:110px}
+  select{
+    font:inherit;font-size:14px;font-weight:600;border:3px solid var(--ink);border-radius:999px;
+    padding:6px 11px;background:var(--field);color:var(--ink);cursor:pointer;
+  }
+  .grid-mini{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:8px}
+  .mini{
+    border:3px solid var(--ink);background:var(--tile);border-radius:13px;padding:4px 3px 2px;
+    text-align:center;box-shadow:0 3px 0 var(--ink);
+  }
+  .mini:active{transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
+  .mini svg{display:block;width:100%;height:auto}
+  .mini .cap{display:block;font-size:11px;font-weight:500;padding:2px 0 3px;line-height:1.1}
+  .lay{
+    display:flex;align-items:center;gap:7px;border:3px solid var(--ink);border-radius:13px;
+    padding:5px 7px;background:var(--tile);margin-bottom:7px;
+  }
+  .lay.on{background:var(--mint);color:#2b2145}
+  .lay .nm{flex:1;font-size:13px;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .chipdot{width:16px;height:16px;border-radius:50%;border:2.5px solid var(--ink);flex:none}
+  @media (max-width:900px){
+    .st-board{grid-template-columns:1fr}
+  }
   .sound-wrap{display:flex;align-items:center;gap:6px}
   input[type=range]{width:74px;accent-color:var(--mint);cursor:pointer}
 
@@ -243,7 +295,7 @@
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" id="makerView">
   <header>
     <div>
       <div class="mark">Me<span>Make</span></div>
@@ -259,6 +311,7 @@
         <input type="range" id="vol" min="0" max="100" value="55" aria-label="Volume">
       </span>
       <button class="btn btn-ico" id="themeBtn" title="Day or night (N)" aria-label="Day or night">&#127769;</button>
+      <button class="btn btn-sun" id="toStudio" title="Full body, poses and drawing">Studio &rarr;</button>
       <button class="btn btn-ico" id="helpBtn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
     </div>
   </header>
@@ -358,6 +411,58 @@
   </footer>
 </div>
 
+<div class="wrap" id="studioView" hidden>
+  <header>
+    <div>
+      <div class="mark">MeMake <span>Studio</span></div>
+      <p class="tagline">A whole body this time. Pose it, dress it, draw on it, hand it a sword.</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn btn-sm" id="stBack">&#8592; Face maker</button>
+      <button class="btn btn-ico" id="stUndo" title="Undo (Ctrl+Z)" aria-label="Undo">&#8634;</button>
+      <button class="btn btn-ico" id="stRedo" title="Redo (Ctrl+Y)" aria-label="Redo">&#8635;</button>
+      <button class="btn btn-coral" id="stRandom" title="Random pose (D)">Wiggle</button>
+      <button class="btn btn-ico" id="stHelpBtn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+    </div>
+  </header>
+
+  <div class="board st-board">
+    <section class="panel" aria-label="Your character">
+      <div class="st-canvas" id="stCanvas" title="Drag the dots to pose"></div>
+
+      <div class="st-sel" id="stProps" hidden></div>
+
+      <div class="name-row">
+        <input type="text" id="stName" maxlength="22" placeholder="Name your character" aria-label="Character name">
+      </div>
+      <div class="save-row">
+        <button class="btn btn-mint" id="stPng">Save PNG</button>
+        <button class="btn btn-sun" id="stSvg">Save SVG</button>
+        <button class="btn btn-sm" id="stCopy">Copy image</button>
+        <button class="btn btn-sm" id="stShelf">Add to shelf</button>
+        <button class="btn btn-sm" id="stLinkBtn" title="Copy a link to this whole scene">Link</button>
+      </div>
+      <p class="hint">Everything you add becomes its own sticker. Pin one to a hand and it swings along with the pose.</p>
+    </section>
+
+    <section class="panel" aria-label="Studio tools">
+      <div class="chips" id="stTabs" role="tablist" aria-label="Studio tools"></div>
+      <div id="stPanels">
+        <div class="st-panel" data-tab="pose"></div>
+        <div class="st-panel" data-tab="body" hidden></div>
+        <div class="st-panel" data-tab="outfit" hidden></div>
+        <div class="st-panel" data-tab="add" hidden></div>
+        <div class="st-panel" data-tab="draw" hidden></div>
+        <div class="st-panel" data-tab="layers" hidden></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    Drawn in the same single file as the face maker. No internet needed once it's saved.
+  </footer>
+</div>
+
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <div class="veil" id="helpVeil" hidden>
@@ -378,6 +483,15 @@
       <div><span>Sound on or off</span><span><kbd>M</kbd></span></div>
       <div><span>Day or night</span><span><kbd>N</kbd></span></div>
       <div><span>Close this</span><span><kbd>Esc</kbd></span></div>
+    </div>
+    <h2 style="margin-top:16px">In the studio</h2>
+    <div class="keys">
+      <div><span>Pick up / draw / rub out</span><span><kbd>V</kbd> <kbd>P</kbd> <kbd>E</kbd></span></div>
+      <div><span>Show or hide the joints</span><span><kbd>J</kbd></span></div>
+      <div><span>Random pose</span><span><kbd>D</kbd></span></div>
+      <div><span>Nudge the chosen sticker</span><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd> <kbd>&uarr;</kbd> <kbd>&darr;</kbd></span></div>
+      <div><span>Delete the chosen sticker</span><span><kbd>Del</kbd></span></div>
+      <div><span>Keep it square while resizing</span><span><kbd>Shift</kbd>+drag</span></div>
     </div>
     <div class="save-row"><button class="btn btn-mint" id="helpClose">Got it</button></div>
   </div>
@@ -1771,10 +1885,12 @@ function buildSVG(st, uid, opts){
   var k = ((faceHW(c) + 2) / 90).toFixed(3);
   function fitHair(s){ return '<g transform="translate(200,0) scale('+k+',1) translate(-200,0)">'+s+'</g>'; }
 
-  out += bg.draw(c, uid + "b");
+  if(!opts.headOnly) out += bg.draw(c, uid + "b");
 
-  body += drawNeck(c);
-  body += clothes.draw(c, uid + "c");
+  if(!opts.headOnly){
+    body += drawNeck(c);
+    body += clothes.draw(c, uid + "c");
+  }
   if(hair.back) body += fitHair(hair.back(c));
   body += drawFace(c);
   if(beard.back) body += beard.back(c);
@@ -1787,8 +1903,10 @@ function buildSVG(st, uid, opts){
   if(hair.front) body += fitHair(hair.front(c));
   body += pick(HATS, st.hat, "none").draw(c);
   body += pick(EXTRAS, st.extra, "none").draw(c);
-  body += pick(BUDDIES, st.buddy, "none").draw(c);
+  if(!opts.headOnly) body += pick(BUDDIES, st.buddy, "none").draw(c);
 
+  /* head only is what the full body rig hangs on the neck */
+  if(opts.headOnly) return body;
   return out + '<g class="mm-bob">' + body + '</g>';
 }
 
@@ -1882,6 +2000,1290 @@ function randomiseColors(st){
   if(st.hatC === st.cloth) st.cloth = randOf(COLOR_FIELDS.cloth.palette);
   if(st.cloth2 === st.cloth) st.cloth2 = lum(st.cloth) > 0.5 ? "#2b2145" : "#ffffff";
   return st;
+}
+
+/* =====================================================================
+   FULL BODY — a little puppet rig.
+   Angles are degrees. 0 points straight down, positive turns towards the
+   right of the picture. Everything is drawn in "hip space" (hips at 0,0)
+   and the whole figure is then placed with one transform, so a lean tips
+   the entire character without touching a single joint angle.
+   Studio canvas is 400 x 640 with the hips at (200,400).
+   ===================================================================== */
+var BODY_W = 400, BODY_H = 640, BODY_VB = "0 0 400 640";
+var RIG = {
+  spine:94, neck:30, sh:38, upper:60, fore:54,
+  pelvis:20, thigh:74, shin:68,
+  armW:21, legW:25, hand:14
+};
+/* RIG.sh is the shoulder half width; the torso is drawn a touch narrower */
+
+function P2(o,a,l){ var r = a*Math.PI/180; return { x:o.x + Math.sin(r)*l, y:o.y + Math.cos(r)*l }; }
+function N1(n){ return (Math.round(n*10)/10); }
+function ptStr(p){ return N1(p.x)+" "+N1(p.y); }
+function segD(a,b){ return "M"+ptStr(a)+"L"+ptStr(b); }
+function segD3(a,b,c){ return "M"+ptStr(a)+"L"+ptStr(b)+"L"+ptStr(c); }
+function lerpPt(a,b,t){ return { x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t }; }
+/* a point part way down the whole arm, 0 at the shoulder, 1 at the wrist */
+function armPt(sh,el,wr,f){ return f<=0.5 ? lerpPt(sh,el,f/0.5) : lerpPt(el,wr,(f-0.5)/0.5); }
+function angTo(o,p){ return Math.atan2(p.x-o.x, p.y-o.y)*180/Math.PI; }
+function atFrame(x,y,a,s){
+  return '<g transform="translate('+N1(x)+','+N1(y)+') rotate('+N1(a)+')">'+s+'</g>';
+}
+
+var DEFAULT_POSE = {
+  x:0, y:0, lean:0, neck:0, tilt:0,
+  aUL:-10, aLL:-5, aUR:10, aLR:5,
+  lUL:-5, lLL:3, lUR:5, lLR:-3,
+  fL:0, fR:0
+};
+var DEFAULT_BODY = { hs:0.66, thick:1, legs:1, tall:1 };
+
+function clonePose(p){ var o={},k; for(k in p) o[k]=p[k]; return o; }
+
+/* ---------- the skeleton, in hip space ---------- */
+function rigLocal(p, b){
+  b = b || DEFAULT_BODY;
+  var sp = RIG.spine*b.tall, th = RIG.thigh*b.legs, sn = RIG.shin*b.legs;
+  var hip = { x:0, y:0 };
+  var chest = P2(hip, 180, sp);
+  var neck  = P2(chest, 180 + p.neck, RIG.neck);
+  var shL = P2(chest, 270, RIG.sh), shR = P2(chest, 90, RIG.sh);
+  var hpL = P2(hip, 270, RIG.pelvis), hpR = P2(hip, 90, RIG.pelvis);
+  var aL = p.aUL, aL2 = aL + p.aLL, aR = p.aUR, aR2 = aR + p.aLR;
+  var gL = p.lUL, gL2 = gL + p.lLL, gR = p.lUR, gR2 = gR + p.lLR;
+  var elL = P2(shL, aL, RIG.upper), wrL = P2(elL, aL2, RIG.fore);
+  var elR = P2(shR, aR, RIG.upper), wrR = P2(elR, aR2, RIG.fore);
+  var knL = P2(hpL, gL, th), anL = P2(knL, gL2, sn);
+  var knR = P2(hpR, gR, th), anR = P2(knR, gR2, sn);
+  return {
+    hip:hip, chest:chest, neck:neck, shL:shL, shR:shR, hpL:hpL, hpR:hpR,
+    elL:elL, wrL:wrL, elR:elR, wrR:wrR, knL:knL, anL:anL, knR:knR, anR:anR,
+    aL:aL, aL2:aL2, aR:aR, aR2:aR2, gL:gL, gL2:gL2, gR:gR, gR2:gR2,
+    headA:p.neck + p.tilt, spine:sp, hs:b.hs, thick:b.thick
+  };
+}
+
+/* figure placement: hip space -> canvas space */
+function figFrame(sc){ return { ox:200 + sc.pose.x, oy:400 + sc.pose.y, a:sc.pose.lean }; }
+function toWorld(pt, F){
+  var r = F.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r);
+  return { x: F.ox + pt.x*c - pt.y*s, y: F.oy + pt.x*s + pt.y*c };
+}
+function toLocalPt(pt, F){
+  var r = -F.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r);
+  var dx = pt.x - F.ox, dy = pt.y - F.oy;
+  return { x: dx*c - dy*s, y: dx*s + dy*c };
+}
+
+/* every point you can grab, and every place a prop can be pinned */
+var JOINT_LIST = [
+  { k:"root",   lab:"Whole body" },
+  { k:"hip",    lab:"Hips" },
+  { k:"chest",  lab:"Chest" },
+  { k:"head",   lab:"Head" },
+  { k:"elbowL", lab:"Elbow (left)" },
+  { k:"handL",  lab:"Hand (left)" },
+  { k:"elbowR", lab:"Elbow (right)" },
+  { k:"handR",  lab:"Hand (right)" },
+  { k:"kneeL",  lab:"Knee (left)" },
+  { k:"footL",  lab:"Foot (left)" },
+  { k:"kneeR",  lab:"Knee (right)" },
+  { k:"footR",  lab:"Foot (right)" }
+];
+function jointFrames(R, F){
+  function w(pt, a){ var p = toWorld(pt, F); return { x:p.x, y:p.y, a:F.a + a }; }
+  return {
+    world:  { x:0, y:0, a:0 },
+    root:   w(R.hip, 0),
+    hip:    w(R.hip, 0),
+    chest:  w(R.chest, 0),
+    head:   w(R.neck, R.headA),
+    elbowL: w(R.elL, R.aL),
+    handL:  w(R.wrL, R.aL2),
+    elbowR: w(R.elR, R.aR),
+    handR:  w(R.wrR, R.aR2),
+    kneeL:  w(R.knL, R.gL),
+    footL:  w(R.anL, R.gL2),
+    kneeR:  w(R.knR, R.gR),
+    footR:  w(R.anR, R.gR2)
+  };
+}
+
+/* ---------- clothes for the body ---------- */
+var TOPS = {
+  none:  { name:"Bare",     sleeve:0 },
+  tee:   { name:"Tee",      sleeve:0.3,  hem:true },
+  long:  { name:"Sleeves",  sleeve:1,    hem:true },
+  tank:  { name:"Tank",     sleeve:0,    straps:true },
+  crop:  { name:"Crop top", sleeve:0.22, crop:true },
+  hoodie:{ name:"Hoodie",   sleeve:1,    hood:true, pocket:true },
+  jacket:{ name:"Jacket",   sleeve:1,    open:true },
+  suit:  { name:"Suit",     sleeve:1,    tie:true },
+  dress: { name:"Dress",    sleeve:0.2,  skirt:118, flare:34 },
+  robe:  { name:"Robe",     sleeve:0.92, skirt:196, flare:44 },
+  armor: { name:"Armour",   sleeve:0.45, pads:true },
+  space: { name:"Space",    sleeve:1,    rings:true }
+};
+var BOTTOMS = {
+  none:  { name:"Bare",       len:0 },
+  pants: { name:"Pants",      len:1 },
+  capri: { name:"Cropped",    len:0.74 },
+  shorts:{ name:"Shorts",     len:0.4 },
+  skirt: { name:"Skirt",      skirt:76,  flare:30 },
+  longsk:{ name:"Long skirt", skirt:150, flare:38 }
+};
+var SHOES = {
+  none:  { name:"Bare feet" },
+  sneak: { name:"Sneakers",  toe:1,   cuff:true },
+  boot:  { name:"Boots",     toe:1.15, tall:26 },
+  smart: { name:"Smart",     toe:1.25 },
+  big:   { name:"Big shoes", toe:1.7 }
+};
+
+/* one-tap outfits */
+var OUTFITS = [
+  { name:"Casual",  o:{ top:"tee",    bottom:"pants",  shoes:"sneak" } },
+  { name:"Hoodie",  o:{ top:"hoodie", bottom:"pants",  shoes:"sneak" } },
+  { name:"Smart",   o:{ top:"suit",   bottom:"pants",  shoes:"smart" } },
+  { name:"Summer",  o:{ top:"crop",   bottom:"shorts", shoes:"none"  } },
+  { name:"Dress",   o:{ top:"dress",  bottom:"none",   shoes:"smart" } },
+  { name:"Wizard",  o:{ top:"robe",   bottom:"none",   shoes:"boot"  } },
+  { name:"Knight",  o:{ top:"armor",  bottom:"pants",  shoes:"boot"  } },
+  { name:"Space",   o:{ top:"space",  bottom:"pants",  shoes:"boot"  } },
+  { name:"Skater",  o:{ top:"jacket", bottom:"shorts", shoes:"sneak" } },
+  { name:"Skirt",   o:{ top:"tee",    bottom:"skirt",  shoes:"smart" } }
+];
+
+/* ---------- poses ---------- */
+var POSES = [
+  { name:"Stand",  p:{} },
+  { name:"Wave",   p:{ aUR:32, aLR:118, aUL:-12, aLL:-6, tilt:-4 } },
+  { name:"Cheer",  p:{ aUR:128, aLR:18, aUL:-128, aLL:-18, lUL:-8, lUR:8 } },
+  { name:"Hero",   p:{ aUL:-52, aLL:76, aUR:52, aLR:-76, lUL:-9, lUR:9, neck:0 } },
+  { name:"T-pose", p:{ aUL:-90, aLL:0, aUR:90, aLR:0, lUL:-3, lLL:0, lUR:3, lLR:0 } },
+  { name:"Think",  p:{ aUR:22, aLR:-162, aUL:-24, aLL:56, tilt:7, neck:-4 } },
+  { name:"Point",  p:{ aUR:86, aLR:6, aUL:-14, aLL:-6, tilt:5 } },
+  { name:"Run",    p:{ lean:8, aUL:-44, aLL:-52, aUR:40, aLR:-58, lUL:-42, lLL:26, lUR:36, lLR:-62, fL:-14, fR:16 } },
+  { name:"Jump",   p:{ y:-34, aUL:-142, aLL:-16, aUR:142, aLR:16, lUL:-32, lLL:52, lUR:34, lLR:-54, fL:-18, fR:18 } },
+  { name:"Kick",   p:{ lean:-10, aUL:-64, aLL:-18, aUR:70, aLR:26, lUL:-6, lLL:8, lUR:74, lLR:-14, fR:20 } },
+  { name:"Sit",    p:{ y:88, aUL:-34, aLL:12, aUR:34, aLR:-12, lUL:-78, lLL:104, lUR:78, lLR:-104, fL:-20, fR:20 } },
+  { name:"Squat",  p:{ y:54, lean:6, aUL:-44, aLL:-40, aUR:44, aLR:40, lUL:-46, lLL:96, lUR:46, lLR:-96 } },
+  { name:"Fly",    p:{ lean:-58, x:92, y:70, aUL:-26, aLL:-14, aUR:150, aLR:10, lUL:-8, lLL:-14, lUR:10, lLR:-18 } },
+  { name:"Lie",    p:{ lean:90, x:-16, y:120, aUL:-38, aLL:-22, aUR:26, aLR:36, lUL:-8, lLL:14, lUR:9, lLR:-18 } },
+  { name:"Dance",  p:{ lean:-7, aUL:-152, aLL:-28, aUR:46, aLR:-72, lUL:-16, lLL:10, lUR:38, lLR:-58, fR:18 } },
+  { name:"Shy",    p:{ tilt:9, neck:5, aUL:-16, aLL:44, aUR:16, aLR:-44, lUL:-2, lUR:14, lLR:-20 } }
+];
+function poseFrom(preset){
+  var p = clonePose(DEFAULT_POSE), k;
+  for(k in preset) if(k in p) p[k] = preset[k];
+  return p;
+}
+function mirrorPose(p){
+  var q = clonePose(p), sw = [["aUL","aUR"],["aLL","aLR"],["lUL","lUR"],["lLL","lLR"],["fL","fR"]], i;
+  for(i=0;i<sw.length;i++){ q[sw[i][0]] = -p[sw[i][1]]; q[sw[i][1]] = -p[sw[i][0]]; }
+  q.x = -p.x; q.lean = -p.lean; q.neck = -p.neck; q.tilt = -p.tilt;
+  return q;
+}
+
+/* ---------- drawing the figure ---------- */
+function inkStroke(d,w){ return '<path d="'+d+'" fill="none" stroke="'+LINE+'" stroke-width="'+N1(w)+'" stroke-linecap="round" stroke-linejoin="round"/>'; }
+function colStroke(d,col,w){ return '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="'+N1(w)+'" stroke-linecap="round" stroke-linejoin="round"/>'; }
+var PAD = 10;   /* the ink border is 5px on every side */
+
+/* a shoe / bare foot, drawn at the ankle and turned with the shin */
+function footArt(ang, toward, col, sh, skin){
+  var t = SHOES[sh] || SHOES.none, out = "", tall = t.tall || 0, y0 = 2;
+  if(sh === "none" || !t.toe){
+    out += '<path d="M-14 '+y0+' q-4 25 2 29 q12 6 22 0 q6 -6 3 -29 z" fill="'+skin+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+        +  '<path d="M2 '+(y0+24)+' q9 4 15 0" fill="none" stroke="'+LINE+'" stroke-width="3" opacity="0.4"/>';
+  } else {
+    var toe = 22*t.toe;
+    if(tall) out += '<path d="M-15 '+N1(y0-tall+7)+' q0 -7 7 -7 h16 q7 0 7 7 v'+N1(tall+3)+' h-30 z" fill="'+col+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+    out += '<path d="M-15 '+y0+' q-4 24 2 30 q13 7 '+N1(toe)+' 0 q8 -9 5 -30 z" fill="'+col+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+    out += '<path d="M-12 '+(y0+27)+' q14 6 '+N1(toe*0.85)+' 0" fill="none" stroke="'+LINE+'" stroke-width="4" opacity="0.38"/>';
+    if(t.cuff) out += '<path d="M-15 '+(y0+3)+' h30" fill="none" stroke="'+shade(col,-0.35)+'" stroke-width="5"/>';
+  }
+  /* one shoe, mirrored for the other foot, so both sit the right way round */
+  return '<g transform="rotate('+N1(ang)+')'+(toward < 0 ? ' scale(-1,1)' : '')+'">'+out+'</g>';
+}
+
+/* the whole puppet, in hip space */
+function figureArt(st, sc, R, uid){
+  var c = palette(st), o = sc.outfit, top = TOPS[o.top] || TOPS.tee, bot = BOTTOMS[o.bottom] || BOTTOMS.pants;
+  var skin = c.skin, aw = RIG.armW*R.thick, lw = RIG.legW*R.thick, hr = RIG.hand*R.thick;
+  var topC = o.topC, topC2 = o.topC2, botC = o.botC, shoeC = o.shoeC;
+  var sleeve = top.sleeve, legLen = bot.len === undefined ? 0 : bot.len;
+  var out = "";
+
+  /* ---- one limb: ink underneath, colour on top, so nothing seams ---- */
+  /* a hem is a short line straight across the limb */
+  function hem(end, ang, w, col){
+    return colStroke(segD(P2(end, ang+90, w/2), P2(end, ang-90, w/2)), col, 4.5);
+  }
+  function arm(sh, el, wr, aU, aL){
+    var d = segD3(sh, el, wr), s = "", f = Math.min(sleeve, 0.93);
+    s += inkStroke(d, aw + PAD);
+    s += '<circle cx="'+N1(wr.x)+'" cy="'+N1(wr.y)+'" r="'+N1(hr+5)+'" fill="'+LINE+'"/>';
+    s += colStroke(d, skin, aw);
+    if(sleeve > 0){
+      var end = armPt(sh, el, wr, f);
+      s += colStroke(f <= 0.5 ? segD(sh, end) : segD3(sh, el, end), topC, aw);
+      s += hem(end, f <= 0.5 ? aU : aL, aw, shade(topC,-0.25));
+      if(top.rings) s += colStroke(segD(armPt(sh,el,wr,0.42), armPt(sh,el,wr,0.5)), topC2, aw);
+    }
+    s += '<circle cx="'+N1(wr.x)+'" cy="'+N1(wr.y)+'" r="'+N1(hr)+'" fill="'+skin+'"/>';
+    return s;
+  }
+  function leg(hp, kn, an, gU, gL){
+    var d = segD3(hp, kn, an), s = "", f = Math.min(legLen, 0.97);
+    s += inkStroke(d, lw + PAD);
+    s += colStroke(d, skin, lw);
+    if(legLen > 0){
+      var end = armPt(hp, kn, an, f);
+      s += colStroke(f <= 0.5 ? segD(hp, end) : segD3(hp, kn, end), botC, lw);
+      s += hem(end, f <= 0.5 ? gU : gL, lw, shade(botC,-0.22));
+    }
+    return s;
+  }
+  function footOf(an, ang, dir){
+    return atFrame(an.x, an.y, 0, footArt(ang, dir, shoeC, o.shoes, skin));
+  }
+
+  /* ---- torso, drawn around the hip ---- */
+  var TW = 30, SW = RIG.sh - 2, sp = R.spine;
+  var torsoD = "M"+(-SW)+" "+(-sp)+" C"+(-SW-4)+" "+(-sp*0.62)+" "+(-TW-2)+" "+(-sp*0.4)+" "+(-TW)+" 6"
+             + " L"+TW+" 6 C"+(TW+2)+" "+(-sp*0.4)+" "+(SW+4)+" "+(-sp*0.62)+" "+SW+" "+(-sp)+" Z";
+  var neckD = "M0 "+(-sp+4)+" L0 "+(-sp-RIG.neck+6);
+
+  var torso = "";
+  torso += inkStroke(neckD, 26);
+  torso += colStroke(neckD, shade(skin,-0.1), 16);
+  if(top.hood){
+    torso += '<path d="M-78 '+(-sp+18)+' C-86 '+(-sp-106)+' 86 '+(-sp-106)+' 78 '+(-sp+18)+' q-18 22 -78 22 q-60 0 -78 -22 z" fill="'+shade(topC,-0.16)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+  }
+  torso += '<path d="'+torsoD+'" fill="'+LINE+'" stroke="'+LINE+'" stroke-width="'+PAD+'" stroke-linejoin="round"/>';
+  torso += '<path d="'+torsoD+'" fill="'+(top === TOPS.none ? skin : topC)+'"/>';
+
+  if(top.straps){
+    /* bare shoulders: skin underneath, then a narrow vest on top */
+    torso += '<path d="'+torsoD+'" fill="'+skin+'"/>'
+          +  '<path d="M-17 '+(-sp-2)+' L17 '+(-sp-2)+' L'+(TW+1)+' 6 L'+(-TW-1)+' 6 Z" fill="'+topC+'"/>';
+  }
+  if(top.crop) torso += '<path d="M'+(-TW-2)+' '+(-sp*0.3)+' L'+(TW+2)+' '+(-sp*0.3)+' L'+TW+' 6 L'+(-TW)+' 6 Z" fill="'+skin+'"/>';
+  if(top.open){
+    torso += '<path d="M-13 '+(-sp+4)+' L0 '+(-sp*0.52)+' L13 '+(-sp+4)+' Z" fill="'+shade(topC,-0.3)+'"/>'
+          +  inkStroke("M0 "+(-sp*0.52)+" L0 6", 4);
+  }
+  if(top.tie){
+    torso += '<path d="M-14 '+(-sp+2)+' L0 '+(-sp*0.5)+' L14 '+(-sp+2)+' Z" fill="#ffffff"/>'
+          +  '<path d="M0 '+(-sp*0.52)+' l7 8 l-7 32 l-7 -32 z" fill="'+topC2+'" stroke="'+LINE+'" stroke-width="3.5" stroke-linejoin="round"/>';
+  }
+  if(top.pocket) torso += '<path d="M-22 '+(-sp*0.18)+' h44 v22 q-22 8 -44 0 z" fill="'+shade(topC,-0.12)+'" stroke="'+LINE+'" stroke-width="4" stroke-linejoin="round"/>';
+  if(top.rings){
+    torso += colStroke("M"+(-TW-1)+" "+(-sp*0.52)+" L"+(TW+1)+" "+(-sp*0.52), topC2, 7);
+    torso += '<circle cx="0" cy="'+(-sp*0.72)+'" r="11" fill="'+topC2+'" stroke="'+LINE+'" stroke-width="4"/>';
+  }
+  if(top.hem) torso += colStroke("M"+(-TW)+" 2 L"+TW+" 2", shade(topC,-0.2), 5);
+  if(top.pads){
+    torso += '<path d="M'+(-SW-9)+' '+(-sp+2)+' q22 -20 40 -2 q-20 10 -40 2 z" fill="'+shade(topC,0.2)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+          +  '<path d="M'+(SW+9)+' '+(-sp+2)+' q-22 -20 -40 -2 q20 10 40 2 z" fill="'+shade(topC,0.2)+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>'
+          +  colStroke("M"+(-TW+4)+" "+(-sp*0.45)+" L"+(TW-4)+" "+(-sp*0.45), shade(topC,-0.25), 5);
+  }
+
+  /* skirts hang off the hips */
+  function skirt(len, flare, col){
+    return '<path d="M-31 -12 L31 -12 L'+(31+flare)+' '+len+' Q0 '+(len+20)+' '+(-31-flare)+' '+len+' Z" fill="'+col+'" stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round"/>';
+  }
+  var skirtArt = "";
+  if(top.skirt) skirtArt = skirt(top.skirt, top.flare, topC);
+  else if(bot.skirt) skirtArt = skirt(bot.skirt, bot.flare, botC);
+
+  /* ---- stack it up: far side, body, near side ---- */
+  out += arm(R.shL, R.elL, R.wrL, R.aL, R.aL2);
+  out += leg(R.hpL, R.knL, R.anL, R.gL, R.gL2);
+  out += footOf(R.anL, R.gL2 + sc.pose.fL, -1);
+  out += leg(R.hpR, R.knR, R.anR, R.gR, R.gR2);
+  out += footOf(R.anR, R.gR2 + sc.pose.fR, 1);
+  out += torso;
+  out += skirtArt;
+
+  /* the head is the portrait art, shrunk and hung on the neck */
+  out += '<g transform="translate('+N1(R.neck.x)+','+N1(R.neck.y)+') rotate('+N1(R.headA)+') scale('+R.hs+') translate(-200,-252)">'
+      +  buildSVG(st, uid+"h", { headOnly:true })
+      +  '</g>';
+
+  out += arm(R.shR, R.elR, R.wrR, R.aR, R.aR2);
+  return out;
+}
+
+/* ---------- props you can stamp on and pin to a hand ---------- */
+/* each one is drawn inside a 0..100 box so it can be scaled anywhere */
+var STAMPS = {
+  sword:  { name:"Sword",  d:function(c){ return P("M46 4 L54 4 L58 62 L42 62 Z", shade(c,0.45),4) + P("M28 62 h44 v9 h-44 z", c,4) + P("M46 71 h8 v22 h-8 z", shade(c,-0.3),4) + C(50,96,7,c,4); } },
+  wand:   { name:"Wand",   d:function(c){ return P("M44 34 L56 34 L54 96 L46 96 Z", shade(c,-0.2),4) + star(50,24,22,c) + star(78,50,9,shade(c,0.4)) + star(22,54,7,shade(c,0.4)); } },
+  shield: { name:"Shield", d:function(c){ return P("M12 12 h76 v40 q0 30 -38 46 q-38 -16 -38 -46 z", c,5) + P("M50 24 L62 44 L50 76 L38 44 Z", shade(c,0.4),3); } },
+  staff:  { name:"Staff",  d:function(c){ return P("M44 24 L56 24 L53 98 L47 98 Z", "#8a5a2b",4) + C(50,20,18,c,5) + C(50,20,7,shade(c,0.5)); } },
+  bow:    { name:"Bow",    d:function(c){ return P("M30 6 q40 44 0 88 q22 -44 0 -88 z", c,5) + PL("M32 8 L32 94", shade(c,-0.4),4) + P("M34 46 h58 v8 h-58 z", "#c9b28a",3); } },
+  guitar: { name:"Guitar", d:function(c){ return P("M28 52 q-14 22 8 34 q22 10 32 -8 q8 -16 -4 -26 q10 -12 2 -24 q-12 -14 -28 -4 q-16 10 -10 28 z", c,5) + C(48,70,10,LINE) + P("M56 44 L84 8 L92 16 L64 50 Z", shade(c,-0.35),4); } },
+  mic:    { name:"Mic",    d:function(c){ return P("M38 8 h24 q10 0 10 12 v22 q0 12 -12 12 h-20 q-12 0 -12 -12 v-22 q0 -12 10 -12 z", c,5) + P("M46 54 h8 v36 h-8 z", shade(c,-0.3),4) + P("M32 92 h36 v8 h-36 z", shade(c,-0.3),4); } },
+  phone:  { name:"Phone",  d:function(c){ return RT(30,10,40,80,9,c,5) + RT(36,20,28,54,4,shade(c,0.6)) + C(50,82,4,shade(c,0.6)); } },
+  coffee: { name:"Cup",    d:function(c){ return P("M26 26 h48 l-6 62 q-1 8 -10 8 h-16 q-9 0 -10 -8 z", c,5) + P("M74 38 q18 2 18 16 q0 14 -16 14", "none",5) + P("M22 18 h56 v10 h-56 z", shade(c,-0.25),4) + PL("M40 6 q6 -6 0 -12 M56 6 q6 -6 0 -12", shade(c,0.5),4); } },
+  book:   { name:"Book",   d:function(c){ return P("M12 18 q22 -8 38 4 q16 -12 38 -4 v62 q-22 -8 -38 4 q-16 -12 -38 -4 z", c,5) + PL("M50 22 L50 84", LINE,4); } },
+  flag:   { name:"Flag",   d:function(c){ return P("M24 6 h7 v92 h-7 z", "#8a5a2b",4) + P("M31 10 q26 14 52 0 v36 q-26 14 -52 0 z", c,5); } },
+  sign:   { name:"Sign",   d:function(c){ return P("M44 52 h12 v46 h-12 z", "#8a5a2b",4) + RT(6,8,88,46,10,c,5); } },
+  balloon:{ name:"Balloon",d:function(c){ return E(50,34,28,32,c,5) + P("M44 64 h12 l-6 10 z", shade(c,-0.3),3) + PL("M50 74 q12 14 0 24", LINE,4); } },
+  star:   { name:"Star",   d:function(c){ return '<g stroke="'+LINE+'" stroke-width="5" stroke-linejoin="round">'+star(50,52,44,c)+'</g>'; } },
+  heart:  { name:"Heart",  d:function(c){ return '<g stroke="'+LINE+'" stroke-width="1.45" stroke-linejoin="round">'+heart(50,44,3.1,c)+'</g>'; } },
+  bolt:   { name:"Bolt",   d:function(c){ return P("M56 4 L24 56 h20 l-8 40 l34 -54 h-20 z", c,5); } },
+  cloud:  { name:"Cloud",  d:function(c){ return P("M22 82 q-20 0 -20 -18 q0 -16 17 -18 q-2 -22 20 -24 q16 -2 23 12 q10 -8 20 0 q10 8 6 20 q12 2 12 14 q0 14 -18 14 z", c, 5); } },
+  sun:    { name:"Sun",    d:function(c){ var i,s=C(50,50,26,c,5),a; for(i=0;i<8;i++){ a=i*Math.PI/4; s+=PL("M"+(50+Math.cos(a)*32)+" "+(50+Math.sin(a)*32)+" L"+(50+Math.cos(a)*44)+" "+(50+Math.sin(a)*44), c, 7);} return s; } },
+  moon:   { name:"Moon",   d:function(c){ return P("M66 8 a44 44 0 1 0 0 84 a34 34 0 1 1 0 -84 z", c,5); } },
+  flower: { name:"Flower", d:function(c){ var i,s="",a; for(i=0;i<6;i++){ a=i*Math.PI/3; s += E(50+Math.cos(a)*22, 40+Math.sin(a)*22, 14, 14, c, 5);} return s + C(50,40,11,shade(c,0.5),4) + PL("M50 52 L50 98", "#4a8f3c", 7); } },
+  tree:   { name:"Tree",   d:function(c){ return P("M42 62 h16 v36 h-16 z", "#8a5a2b",4) + P("M50 4 L84 44 h-16 l14 22 h-64 l14 -22 h-16 z", c,5); } },
+  fish:   { name:"Fish",   d:function(c){ return P("M12 50 q22 -26 48 -20 q22 6 28 20 q-6 14 -28 20 q-26 6 -48 -20 z", c,5) + P("M88 50 l10 -16 v32 z", shade(c,-0.25),4) + C(34,44,5,LINE); } },
+  cake:   { name:"Cake",   d:function(c){ return P("M16 46 h68 v40 q0 8 -8 8 h-52 q-8 0 -8 -8 z", c,5) + P("M16 46 q17 14 34 0 q17 14 34 0 v10 q-17 14 -34 0 q-17 14 -34 0 z", shade(c,0.45),4) + P("M46 20 h8 v22 h-8 z", "#ffffff",3) + P("M50 6 q8 8 0 14 q-8 -6 0 -14 z", "#ffc93c",3); } },
+  gift:   { name:"Gift",   d:function(c){ return RT(14,36,72,58,8,c,5) + P("M44 36 h12 v58 h-12 z", shade(c,0.5),4) + P("M50 36 q-28 -6 -20 -20 q10 -12 20 20 q10 -32 20 -20 q8 14 -20 20 z", shade(c,0.5),4); } },
+  key:    { name:"Key",    d:function(c){ return C(34,32,20,c,5) + C(34,32,8,"#ffffff") + P("M44 40 L86 82 l-8 8 l-8 -8 l-8 8 l-8 -8 l-8 8 l-8 -8 z", c,5); } },
+  bone:   { name:"Bone",   d:function(c){ return P("M20 34 a12 12 0 1 1 10 14 l40 20 a12 12 0 1 1 -4 12 a12 12 0 1 1 -14 -6 l-40 -20 a12 12 0 1 1 8 -20 z", c,5); } },
+  bubble: { name:"Speech", d:function(c){ return P("M8 12 h84 v56 h-46 l-22 22 v-22 h-16 z", c,5); } },
+  wings:  { name:"Wings",  d:function(c){ return P("M50 18 q-44 -16 -46 28 q10 -6 16 4 q6 -8 14 2 q6 -6 16 4 z", c,5) + P("M50 18 q44 -16 46 28 q-10 -6 -16 4 q-6 -8 -14 2 q-6 -6 -16 4 z", c,5); } },
+  halo:   { name:"Halo",   d:function(c){ return '<ellipse cx="50" cy="50" rx="40" ry="14" fill="none" stroke="'+LINE+'" stroke-width="13"/><ellipse cx="50" cy="50" rx="40" ry="14" fill="none" stroke="'+c+'" stroke-width="7"/>'; } },
+  tail:   { name:"Tail",   d:function(c){ return P("M18 96 q-10 -44 22 -60 q30 -14 44 6 q-26 -6 -38 12 q-12 18 -4 42 z", c,5); } },
+  cat:    { name:"Cat",    d:function(c){ return P("M20 96 v-34 q0 -26 30 -26 q30 0 30 26 v34 z", c,5) + P("M26 44 l-4 -20 l18 10 z", c,4) + P("M74 44 l4 -20 l-18 10 z", c,4) + dots([[40,62],[60,62]],4,LINE) + PL("M44 72 q6 6 12 0", LINE, 3.5); } },
+  ghost:  { name:"Ghost",  d:function(c){ return P("M18 92 v-42 q0 -32 32 -32 q32 0 32 32 v42 l-11 -10 l-10 10 l-11 -10 l-10 10 l-11 -10 z", c,5) + dots([[38,52],[62,52]],5,LINE); } },
+  bot:    { name:"Robot",  d:function(c){ return RT(20,30,60,52,10,c,5) + RT(30,44,40,18,6,"#2b2145") + dots([[40,53],[60,53]],4,"#3fd6a4") + PL("M50 30 L50 14", LINE,5) + C(50,10,7,c,4); } },
+  paint:  { name:"Brush",  d:function(c){ return P("M44 6 h12 v56 h-12 z", "#c9a06a",4) + P("M40 62 h20 v14 q0 18 -10 22 q-10 -4 -10 -22 z", c,5); } },
+  hammer: { name:"Hammer", d:function(c){ return P("M44 34 h12 v64 h-12 z", "#c9a06a",4) + P("M18 6 h64 v28 h-64 z", c,5); } }
+};
+var STAMP_KEYS = (function(){ var a=[],k; for(k in STAMPS) a.push(k); return a; })();
+
+/* ---------- plain shapes ---------- */
+var SHAPES = {
+  rect:  "Square",
+  round: "Rounded",
+  circle:"Circle",
+  tri:   "Triangle",
+  dia:   "Diamond",
+  hex:   "Hexagon",
+  starS: "Star",
+  heartS:"Heart",
+  arrow: "Arrow",
+  bubbleS:"Bubble",
+  burst: "Burst",
+  lineS: "Line"
+};
+/* every shape is drawn inside 0,0,w,h */
+function shapeBody(o){
+  var w = o.w, h = o.h, f = o.fill, i, a, pts = [];
+  var sk = o.ink ? ' stroke="'+(o.stroke||LINE)+'" stroke-width="'+(o.sw||5)+'" stroke-linejoin="round"' : '';
+  switch(o.kind){
+    case "rect":   return '<rect x="0" y="0" width="'+w+'" height="'+h+'" fill="'+f+'"'+sk+'/>';
+    case "round":  return '<rect x="0" y="0" width="'+w+'" height="'+h+'" rx="'+Math.min(w,h)*0.22+'" fill="'+f+'"'+sk+'/>';
+    case "circle": return '<ellipse cx="'+w/2+'" cy="'+h/2+'" rx="'+w/2+'" ry="'+h/2+'" fill="'+f+'"'+sk+'/>';
+    case "tri":    return '<polygon points="'+(w/2)+',0 '+w+','+h+' 0,'+h+'" fill="'+f+'"'+sk+'/>';
+    case "dia":    return '<polygon points="'+(w/2)+',0 '+w+','+(h/2)+' '+(w/2)+','+h+' 0,'+(h/2)+'" fill="'+f+'"'+sk+'/>';
+    case "hex":
+      for(i=0;i<6;i++){ a = Math.PI/3*i - Math.PI/2; pts.push((w/2 + Math.cos(a)*w/2).toFixed(1)+","+(h/2 + Math.sin(a)*h/2).toFixed(1)); }
+      return '<polygon points="'+pts.join(" ")+'" fill="'+f+'"'+sk+'/>';
+    case "starS":
+      for(i=0;i<10;i++){ a = Math.PI/5*i - Math.PI/2; var rr = i%2 ? 0.44 : 1;
+        pts.push((w/2 + Math.cos(a)*w/2*rr).toFixed(1)+","+(h/2 + Math.sin(a)*h/2*rr).toFixed(1)); }
+      return '<polygon points="'+pts.join(" ")+'" fill="'+f+'"'+sk+'/>';
+    case "heartS":
+      var hk = ((w/26)+(h/24))/2;
+      sk = o.ink ? ' stroke="'+(o.stroke||LINE)+'" stroke-width="'+((o.sw||5)/hk)+'" stroke-linejoin="round"' : '';
+      return '<path transform="translate('+(w/2)+','+(h*0.46)+') scale('+(w/26)+','+(h/24)+')" d="M0 9 C-9 2 -12 -3 -12 -7 C-12 -12 -8 -14 -5 -14 C-2 -14 0 -11 0 -9 C0 -11 2 -14 5 -14 C8 -14 12 -12 12 -7 C12 -3 9 2 0 9 Z" fill="'+f+'"'+sk+'/>';
+    case "arrow":
+      return '<polygon points="0,'+(h*0.3)+' '+(w*0.6)+','+(h*0.3)+' '+(w*0.6)+',0 '+w+','+(h/2)+' '+(w*0.6)+','+h+' '+(w*0.6)+','+(h*0.7)+' 0,'+(h*0.7)+'" fill="'+f+'"'+sk+'/>';
+    case "bubbleS":
+      return '<path d="M0 '+(h*0.18)+' q0 -'+(h*0.18)+' '+(w*0.18)+' -'+(h*0.18)+' h'+(w*0.64)+' q'+(w*0.18)+' 0 '+(w*0.18)+' '+(h*0.18)+' v'+(h*0.44)+' q0 '+(h*0.18)+' -'+(w*0.18)+' '+(h*0.18)+' h-'+(w*0.42)+' l-'+(w*0.16)+' '+(h*0.2)+' v-'+(h*0.2)+' h-'+(w*0.06)+' q-'+(w*0.18)+' 0 -'+(w*0.18)+' -'+(h*0.18)+' z" fill="'+f+'"'+sk+'/>';
+    case "burst":
+      for(i=0;i<16;i++){ a = Math.PI/8*i; var r2 = i%2 ? 0.58 : 1;
+        pts.push((w/2 + Math.cos(a)*w/2*r2).toFixed(1)+","+(h/2 + Math.sin(a)*h/2*r2).toFixed(1)); }
+      return '<polygon points="'+pts.join(" ")+'" fill="'+f+'"'+sk+'/>';
+    case "lineS":
+      return '<path d="M0 '+h+' L'+w+' 0" fill="none" stroke="'+(o.fill||LINE)+'" stroke-width="'+(o.sw||8)+'" stroke-linecap="round"/>';
+  }
+  return "";
+}
+
+/* ---------- objects on the canvas ---------- */
+function objBody(o){
+  if(o.kind === "text"){
+    var fs = o.h;
+    return '<text x="'+(o.w/2)+'" y="'+(o.h*0.8)+'" text-anchor="middle" font-family="Fredoka, Trebuchet MS, Segoe UI, sans-serif" '
+      + 'font-size="'+fs+'" font-weight="700" fill="'+o.fill+'"'
+      + (o.ink ? ' stroke="'+(o.stroke||LINE)+'" stroke-width="'+(o.sw||4)+'" paint-order="stroke" stroke-linejoin="round"' : '')
+      + '>'+esc(o.text||"")+'</text>';
+  }
+  if(o.kind === "path"){
+    return '<g transform="scale('+(o.w/(o.bw||1))+','+(o.h/(o.bh||1))+')">'
+      + '<path d="'+o.d+'" fill="'+(o.solid ? o.fill : "none")+'" stroke="'+(o.solid ? (o.stroke||LINE) : o.fill)+'" stroke-width="'+(o.sw||6)+'" '
+      + 'stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></g>';
+  }
+  if(o.kind === "stamp"){
+    var s = STAMPS[o.stamp] || STAMPS.star;
+    return '<g transform="scale('+(o.w/100)+','+(o.h/100)+')">' + s.d(o.fill) + '</g>';
+  }
+  return shapeBody(o);
+}
+function objMarkup(o, frames){
+  var f = frames[o.attach || "world"] || frames.world;
+  var inner = '<g transform="translate('+N1(o.x)+','+N1(o.y)+') rotate('+N1(o.rot||0)+','+N1(o.w/2)+','+N1(o.h/2)+')'
+            + (o.flip ? ' scale(-1,1) translate('+N1(-o.w)+',0)' : '') + '" opacity="'+(o.op===undefined?1:o.op)+'" data-oid="'+o.id+'">'
+            + objBody(o) + '</g>';
+  if(!o.attach || o.attach === "world") return inner;
+  return '<g transform="translate('+N1(f.x)+','+N1(f.y)+') rotate('+N1(f.a)+')">' + inner + '</g>';
+}
+
+/* ---------- the whole studio picture ---------- */
+function studioArt(st, sc, uid, opts){
+  opts = opts || {};
+  var c = palette(st), out = "", i, o;
+  var R = rigLocal(sc.pose, sc.body), F = figFrame(sc), frames = jointFrames(R, F);
+
+  if(!opts.transparent){
+    var bg = pick(BGS, sc.bg || "fade", "plain");
+    out += '<g transform="translate(-120,0) scale(1.6)">' + bg.draw(c, uid+"b") + '</g>';
+  }
+  for(i=0;i<sc.objs.length;i++){ o = sc.objs[i]; if(o.back) out += objMarkup(o, frames); }
+
+  if(sc.ground !== false){
+    var low = Math.max(toWorld(R.anL,F).y, toWorld(R.anR,F).y) + 16;
+    out += '<ellipse cx="'+N1(toWorld(R.hip,F).x)+'" cy="'+N1(low)+'" rx="76" ry="15" fill="'+LINE+'" opacity="0.13"/>';
+  }
+  out += atFrame(F.ox, F.oy, F.a, figureArt(st, sc, R, uid));
+
+  for(i=0;i<sc.objs.length;i++){ o = sc.objs[i]; if(!o.back) out += objMarkup(o, frames); }
+  return out;
+}
+function studioMarkup(st, sc, uid, opts){
+  opts = opts || {};
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+BODY_VB+'" preserveAspectRatio="xMidYMid meet" '
+    + 'role="img" aria-label="'+esc(opts.alt || "Your MeMake character")+'">'
+    + studioArt(st, sc, uid, opts) + '</svg>';
+}
+
+/* ---------- scene defaults, save and load ---------- */
+function defaultScene(){
+  return {
+    pose: clonePose(DEFAULT_POSE),
+    body: { hs:0.66, thick:1, legs:1, tall:1 },
+    outfit: { top:"tee", bottom:"pants", shoes:"sneak", topC:"#4a6fd1", topC2:"#ffffff", botC:"#3a3f63", shoeC:"#e05252" },
+    bg: "fade",
+    ground: true,
+    objs: [],
+    seq: 1
+  };
+}
+/* anything that arrives from a link or a file is treated as hostile: every
+   value that ends up inside an SVG attribute gets checked first */
+var OBJ_KINDS = { text:1, path:1, stamp:1 };
+function safeCol(v, fb){
+  return (typeof v === "string" && /^#[0-9a-fA-F]{3,8}$/.test(v)) ? v : fb;
+}
+function safeNum(v, fb, lo, hi){
+  v = +v;
+  return isFinite(v) ? clamp(v, lo, hi) : fb;
+}
+function safePath(v){
+  return (typeof v === "string" && v.length < 60000) ? v.replace(/[^-0-9.,eE\s MLHVQCSTAZmlhvqcstaz]/g, "") : "";
+}
+function cleanObj(raw, id){
+  if(!raw || typeof raw !== "object") return null;
+  var kind = String(raw.kind || "");
+  if(!OBJ_KINDS[kind] && !SHAPES[kind]) return null;
+  var o = {
+    id: id, kind: kind,
+    x: safeNum(raw.x, 0, -4000, 4000), y: safeNum(raw.y, 0, -4000, 4000),
+    w: safeNum(raw.w, 60, 2, 3000),   h: safeNum(raw.h, 60, 2, 3000),
+    rot: safeNum(raw.rot, 0, -360, 360),
+    fill: safeCol(raw.fill, "#4a6fd1"),
+    stroke: safeCol(raw.stroke, LINE),
+    sw: safeNum(raw.sw, 5, 0, 60),
+    op: safeNum(raw.op, 1, 0.02, 1),
+    ink: raw.ink !== false,
+    back: !!raw.back,
+    flip: !!raw.flip,
+    attach: "world"
+  };
+  var j;
+  for(j = 0; j < JOINT_LIST.length; j++) if(JOINT_LIST[j].k === raw.attach) o.attach = raw.attach;
+  if(kind === "text") o.text = String(raw.text === undefined ? "" : raw.text).slice(0, 60);
+  if(kind === "stamp") o.stamp = STAMPS[raw.stamp] ? raw.stamp : "star";
+  if(kind === "path"){
+    o.d = safePath(raw.d);
+    if(!o.d) return null;
+    o.bw = safeNum(raw.bw, o.w, 1, 3000);
+    o.bh = safeNum(raw.bh, o.h, 1, 3000);
+    o.solid = !!raw.solid;
+  }
+  return o;
+}
+function cleanScene(raw){
+  var d = defaultScene(), k, i, o;
+  if(!raw || typeof raw !== "object") return d;
+  if(raw.pose) for(k in d.pose) if(typeof raw.pose[k] === "number") d.pose[k] = safeNum(raw.pose[k], d.pose[k], -720, 720);
+  if(raw.body) for(k in d.body) if(typeof raw.body[k] === "number") d.body[k] = safeNum(raw.body[k], d.body[k], 0.2, 2.4);
+  if(raw.outfit){
+    if(TOPS[raw.outfit.top]) d.outfit.top = raw.outfit.top;
+    if(BOTTOMS[raw.outfit.bottom]) d.outfit.bottom = raw.outfit.bottom;
+    if(SHOES[raw.outfit.shoes]) d.outfit.shoes = raw.outfit.shoes;
+    d.outfit.topC  = safeCol(raw.outfit.topC,  d.outfit.topC);
+    d.outfit.topC2 = safeCol(raw.outfit.topC2, d.outfit.topC2);
+    d.outfit.botC  = safeCol(raw.outfit.botC,  d.outfit.botC);
+    d.outfit.shoeC = safeCol(raw.outfit.shoeC, d.outfit.shoeC);
+  }
+  if(typeof raw.bg === "string" && BGS[raw.bg]) d.bg = raw.bg;
+  d.ground = raw.ground !== false;
+  if(raw.objs instanceof Array){
+    for(i=0;i<raw.objs.length && d.objs.length < 160;i++){
+      o = cleanObj(raw.objs[i], "o" + (d.seq++));
+      if(o) d.objs.push(o);
+    }
+  }
+  return d;
+}
+
+/* =====================================================================
+   THE STUDIO — pose a full body, dress it, draw on it, pin props to it.
+   Lives at /studio (or #studio) and shares the character with the maker.
+   ===================================================================== */
+var scene = defaultScene();
+var stTool = "pick", stSel = null, stJoints = true, stTrans = false, stTab = "pose";
+var stPen = { color:"#e05252", w:8, solid:false };
+var stDrag = null, stPts = null, stLive = "";
+var stHist = [], stHi = -1;
+var ST_KEY = { scene:"memake.studio" };
+
+function stPanelEl(k){ return document.querySelector('.st-panel[data-tab="'+k+'"]'); }
+function norm180(a){ a = a % 360; if(a > 180) a -= 360; if(a < -180) a += 360; return a; }
+function rotTo(c,p){ return Math.atan2(p.x-c.x, -(p.y-c.y))*180/Math.PI; }
+
+/* ---------- history ---------- */
+function stSnap(){ return JSON.stringify({ s:scene, c:encodeState(state) }); }
+function stApply(raw){
+  var o; try{ o = JSON.parse(raw); }catch(e){ return; }
+  scene = cleanScene(o.s);
+  var st = decodeState(o.c);
+  if(st){ delete st.fuzzy; state = st; }
+}
+function stPush(){
+  var s = stSnap();
+  if(stHi >= 0 && stHist[stHi] === s) return;
+  stHist = stHist.slice(0, stHi+1);
+  stHist.push(s);
+  if(stHist.length > 60) stHist.shift();
+  stHi = stHist.length - 1;
+  store.set(ST_KEY.scene, s);
+  stUpdateUndo();
+}
+function stUpdateUndo(){
+  if(!$("stUndo")) return;
+  $("stUndo").disabled = stHi <= 0;
+  $("stRedo").disabled = stHi >= stHist.length - 1;
+}
+function stUndo(){ if(stHi <= 0) return; stHi--; stApply(stHist[stHi]); stSel = null; Snd.tick(); stRefresh(); stBuildAllPanels(); }
+function stRedo(){ if(stHi >= stHist.length-1) return; stHi++; stApply(stHist[stHi]); stSel = null; Snd.tick(); stRefresh(); stBuildAllPanels(); }
+
+/* ---------- objects ---------- */
+function stObj(id){ for(var i=0;i<scene.objs.length;i++) if(scene.objs[i].id === id) return scene.objs[i]; return null; }
+function stIndex(id){ for(var i=0;i<scene.objs.length;i++) if(scene.objs[i].id === id) return i; return -1; }
+function stAdd(o){
+  o.id = "o" + (scene.seq++);
+  if(o.x === undefined){ o.x = 200 - o.w/2; o.y = 250 - o.h/2; }
+  scene.objs.push(o);
+  stSel = o.id;
+  Snd.blip(3);
+  stPush(); stRefresh();
+  return o;
+}
+function stDelSel(){
+  var i = stIndex(stSel); if(i < 0) return;
+  scene.objs.splice(i,1); stSel = null;
+  Snd.tick(); stPush(); stRefresh();
+}
+function stDup(){
+  var o = stObj(stSel); if(!o) return;
+  var n = {}, k; for(k in o) n[k] = o[k];
+  n.x += 16; n.y += 16;
+  stAdd(n);
+}
+function stArrange(dir){
+  var i = stIndex(stSel); if(i < 0) return;
+  var o = scene.objs.splice(i,1)[0];
+  if(dir === "front") scene.objs.push(o);
+  else if(dir === "back") scene.objs.unshift(o);
+  else scene.objs.splice(clamp(i + dir, 0, scene.objs.length), 0, o);
+  Snd.tick(); stPush(); stRefresh();
+}
+
+/* ---------- canvas maths ---------- */
+function stPt(e){
+  var host = $("stCanvas"), svg = host.querySelector("svg");
+  var box = (svg || host).getBoundingClientRect();
+  var s = Math.min(box.width/BODY_W, box.height/BODY_H) || 1;
+  var ox = (box.width - BODY_W*s)/2, oy = (box.height - BODY_H*s)/2;
+  return { x:(e.clientX - box.left - ox)/s, y:(e.clientY - box.top - oy)/s };
+}
+function frameLocal(pt, f){
+  var r = -f.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r);
+  var dx = pt.x - f.x, dy = pt.y - f.y;
+  return { x: dx*c - dy*s, y: dx*s + dy*c };
+}
+function frameWorld(pt, f){
+  var r = f.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r);
+  return { x: f.x + pt.x*c - pt.y*s, y: f.y + pt.x*s + pt.y*c };
+}
+function stFrames(){
+  return jointFrames(rigLocal(scene.pose, scene.body), figFrame(scene));
+}
+function attrUp(el, name){
+  while(el && el.getAttribute){
+    var v = el.getAttribute(name);
+    if(v) return v;
+    el = el.parentNode;
+  }
+  return null;
+}
+
+/* ---------- drawing the canvas ---------- */
+function stHandles(){
+  var R = rigLocal(scene.pose, scene.body), F = figFrame(scene), out = "";
+  function dot(pt, k, cls){
+    var w = toWorld(pt, F);
+    return '<circle class="jd '+(cls||"")+'" data-joint="'+k+'" cx="'+N1(w.x)+'" cy="'+N1(w.y)+'" r="10"/>';
+  }
+  out += dot(R.chest, "chest");
+  out += dot(R.neck, "head");
+  out += dot(R.elL, "elbowL") + dot(R.wrL, "handL");
+  out += dot(R.elR, "elbowR") + dot(R.wrR, "handR");
+  out += dot(R.knL, "kneeL") + dot(R.anL, "footL");
+  out += dot(R.knR, "kneeR") + dot(R.anR, "footR");
+  var top = toWorld(P2(R.neck, 180 + R.headA, 92*scene.body.hs + 24), F);
+  out += '<circle class="jd tilt" data-joint="tilt" cx="'+N1(top.x)+'" cy="'+N1(top.y)+'" r="9"/>';
+  out += dot(R.hip, "root", "root");
+  return '<g class="jlayer">' + out + '</g>';
+}
+function stSelUI(){
+  var o = stObj(stSel);
+  if(!o) return "";
+  var f = stFrames()[o.attach || "world"] || stFrames().world;
+  var corners = [["nw",0,0],["ne",o.w,0],["sw",0,o.h],["se",o.w,o.h]], hs = "", i;
+  for(i=0;i<corners.length;i++)
+    hs += '<circle class="selh" data-h="'+corners[i][0]+'" cx="'+N1(corners[i][1])+'" cy="'+N1(corners[i][2])+'" r="8"/>';
+  var inner = '<g transform="translate('+N1(o.x)+','+N1(o.y)+') rotate('+N1(o.rot||0)+','+N1(o.w/2)+','+N1(o.h/2)+')">'
+    + '<rect class="selbox" x="0" y="0" width="'+N1(o.w)+'" height="'+N1(o.h)+'"/>'
+    + '<line class="selbox" x1="'+N1(o.w/2)+'" y1="0" x2="'+N1(o.w/2)+'" y2="-26"/>'
+    + '<circle class="selh rot" data-h="rot" cx="'+N1(o.w/2)+'" cy="-26" r="9"/>'
+    + hs + '</g>';
+  if(!o.attach || o.attach === "world") return inner;
+  return '<g transform="translate('+N1(f.x)+','+N1(f.y)+') rotate('+N1(f.a)+')">' + inner + '</g>';
+}
+function stDraw(){
+  var ui = "";
+  if(stJoints && stTool === "pick") ui += stHandles();
+  if(stTool === "pick") ui += stSelUI();
+  ui += stLive;
+  $("stCanvas").innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+BODY_VB+'" '
+    + 'preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(charName || "Your MeMake character")+'">'
+    + studioArt(state, scene, "st", { transparent:stTrans }) + ui + '</svg>';
+}
+
+/* ---------- pointer work ---------- */
+function stPoseFrom(j, pt){
+  var R = rigLocal(scene.pose, scene.body), F = figFrame(scene), p = scene.pose;
+  var L = toLocalPt(pt, F);
+  switch(j){
+    case "root":   p.x = clamp(pt.x - 200, -170, 170); p.y = clamp(pt.y - 400, -280, 230); break;
+    case "chest":  p.lean = norm180(angTo(toWorld(R.hip,F), pt) - 180); break;
+    case "head":   p.neck = clamp(norm180(angTo(R.chest, L) - 180), -42, 42); break;
+    case "tilt":   p.tilt = clamp(norm180(angTo(R.neck, L) - 180 - p.neck), -48, 48); break;
+    case "elbowL": p.aUL = norm180(angTo(R.shL, L)); break;
+    case "handL":  p.aLL = norm180(angTo(R.elL, L) - p.aUL); break;
+    case "elbowR": p.aUR = norm180(angTo(R.shR, L)); break;
+    case "handR":  p.aLR = norm180(angTo(R.elR, L) - p.aUR); break;
+    case "kneeL":  p.lUL = norm180(angTo(R.hpL, L)); break;
+    case "footL":  p.lLL = norm180(angTo(R.knL, L) - p.lUL); break;
+    case "kneeR":  p.lUR = norm180(angTo(R.hpR, L)); break;
+    case "footR":  p.lLR = norm180(angTo(R.knR, L) - p.lUR); break;
+  }
+}
+function stDown(e){
+  var pt = stPt(e), t = e.target, cv = $("stCanvas");
+  if(cv.setPointerCapture) { try{ cv.setPointerCapture(e.pointerId); }catch(err){} }
+
+  if(stTool === "pen"){ stDrag = { type:"pen" }; stPts = [pt]; stLive = ""; return; }
+  if(stTool === "erase"){
+    var gone = attrUp(t, "data-oid");
+    if(gone){ stSel = gone; stDelSel(); }
+    else { Snd.err(); toast("Tap a sticker or a drawing to rub it out", true); }
+    return;
+  }
+  var j = attrUp(t, "data-joint");
+  if(j){ stDrag = { type:"joint", j:j }; stPoseFrom(j, pt); stDraw(); return; }
+
+  var h = attrUp(t, "data-h"), sel = stObj(stSel);
+  if(h && sel){ stDrag = { type:"handle", h:h, f:stFrames()[sel.attach || "world"], o:sel }; return; }
+
+  var id = attrUp(t, "data-oid");
+  if(id){
+    var ob = stObj(id);
+    stSel = id;
+    stDrag = { type:"move", start:pt, ox:ob.x, oy:ob.y, o:ob, f:stFrames()[ob.attach || "world"] };
+    Snd.tick(); stRefresh();
+    return;
+  }
+  if(stSel){ stSel = null; stRefresh(); }
+}
+function stMove(e){
+  if(!stDrag) return;
+  var pt = stPt(e);
+  if(stDrag.type === "pen"){
+    var last = stPts[stPts.length-1];
+    if(Math.abs(pt.x-last.x) + Math.abs(pt.y-last.y) < 2.2) return;
+    stPts.push(pt);
+    stLive = '<path class="penline" d="'+penD(stPts,0,0)+'" stroke="'+stPen.color+'" stroke-width="'+stPen.w+'" fill="none"/>';
+    stDraw();
+    return;
+  }
+  if(stDrag.type === "joint"){ stPoseFrom(stDrag.j, pt); stDraw(); return; }
+
+  var o = stDrag.o, f = stDrag.f, p = frameLocal(pt, f);
+  if(stDrag.type === "move"){
+    var d = frameLocal(pt, f), s = frameLocal(stDrag.start, f);
+    o.x = stDrag.ox + (d.x - s.x);
+    o.y = stDrag.oy + (d.y - s.y);
+    stDraw(); return;
+  }
+  if(stDrag.type === "handle"){
+    var cx = o.x + o.w/2, cy = o.y + o.h/2;
+    if(stDrag.h === "rot"){
+      o.rot = Math.round(norm180(rotTo({x:cx,y:cy}, p)));
+      if(e.shiftKey) o.rot = Math.round(o.rot/15)*15;
+    } else {
+      var rr = -(o.rot||0)*Math.PI/180, dx = p.x-cx, dy = p.y-cy;
+      var lx = dx*Math.cos(rr) - dy*Math.sin(rr), ly = dx*Math.sin(rr) + dy*Math.cos(rr);
+      var nw = clamp(Math.abs(lx)*2, 8, 900), nh = clamp(Math.abs(ly)*2, 8, 900);
+      if(e.shiftKey || o.kind === "stamp" || o.kind === "text"){
+        var k = Math.max(nw/o.w, nh/o.h); nw = o.w*k; nh = o.h*k;
+      }
+      o.x = cx - nw/2; o.y = cy - nh/2; o.w = nw; o.h = nh;
+    }
+    stDraw(); return;
+  }
+}
+function stUp(){
+  if(!stDrag) return;
+  var was = stDrag.type;
+  stDrag = null;
+  if(was === "pen"){
+    stLive = "";
+    if(stPts && stPts.length > 1) stFinishPen();
+    else { stPts = null; stDraw(); }
+    return;
+  }
+  Snd.tick(); stPush(); stRefresh();
+}
+function penD(pts, offx, offy){
+  var i, m, n = pts.length, d = "M"+N1(pts[0].x-offx)+" "+N1(pts[0].y-offy);
+  for(i=1;i<n-1;i++){
+    m = { x:(pts[i].x+pts[i+1].x)/2, y:(pts[i].y+pts[i+1].y)/2 };
+    d += " Q"+N1(pts[i].x-offx)+" "+N1(pts[i].y-offy)+" "+N1(m.x-offx)+" "+N1(m.y-offy);
+  }
+  d += " L"+N1(pts[n-1].x-offx)+" "+N1(pts[n-1].y-offy);
+  return d;
+}
+function stFinishPen(){
+  var pts = stPts, i, minx = 1e9, miny = 1e9, maxx = -1e9, maxy = -1e9, pad = stPen.w/2 + 2;
+  for(i=0;i<pts.length;i++){
+    minx = Math.min(minx, pts[i].x); maxx = Math.max(maxx, pts[i].x);
+    miny = Math.min(miny, pts[i].y); maxy = Math.max(maxy, pts[i].y);
+  }
+  var bw = (maxx-minx) + pad*2, bh = (maxy-miny) + pad*2;
+  stPts = null;
+  stAdd({
+    kind:"path", d:penD(pts, minx-pad, miny-pad), bw:bw, bh:bh,
+    x:minx-pad, y:miny-pad, w:bw, h:bh, rot:0,
+    fill:stPen.color, stroke:LINE, sw:stPen.w, solid:stPen.solid, attach:"world"
+  });
+}
+
+/* ---------- adding things ---------- */
+function stAddShape(kind){
+  stAdd({ kind:kind, w:96, h:96, rot:0, fill:stPen.color, stroke:LINE, sw:5, ink:true, attach:"world" });
+  toast("Added a " + String(SHAPES[kind] || "shape").toLowerCase() + " — drag it about");
+}
+function stAddStamp(key){
+  stAdd({ kind:"stamp", stamp:key, w:112, h:112, rot:0, fill:stPen.color, attach:"world" });
+  toast(STAMPS[key].name + " added — pin it to a hand below");
+}
+function stAddText(){
+  var t = ($("stText").value || "").trim(), fs = 46;
+  if(!t){ Snd.err(); toast("Type something first", true); return; }
+  stAdd({ kind:"text", text:t.slice(0,40), w:Math.max(40, t.length*fs*0.58), h:fs, rot:0,
+          fill:stPen.color, stroke:LINE, sw:5, ink:true, attach:"world" });
+  $("stText").value = "";
+}
+
+/* ---------- panels ---------- */
+var ST_TABS = [
+  { k:"pose",   lab:"Pose" },
+  { k:"body",   lab:"Body" },
+  { k:"outfit", lab:"Outfit" },
+  { k:"add",    lab:"Add" },
+  { k:"draw",   lab:"Draw" },
+  { k:"layers", lab:"Layers" }
+];
+var ST_SLIDERS = {
+  pose: [
+    { k:"lean", lab:"Lean",       min:-95,  max:95,  mul:1 },
+    { k:"tilt", lab:"Head tilt",  min:-46,  max:46,  mul:1 },
+    { k:"x",    lab:"Left/right", min:-150, max:150, mul:1 },
+    { k:"y",    lab:"Up/down",    min:-200, max:200, mul:1 }
+  ],
+  body: [
+    { k:"hs",   lab:"Head size",   min:42, max:100, mul:100 },
+    { k:"thick",lab:"Chunkiness",  min:60, max:160, mul:100 },
+    { k:"legs", lab:"Leg length",  min:55, max:145, mul:100 },
+    { k:"tall", lab:"Body length", min:70, max:135, mul:100 }
+  ]
+};
+function slidersHTML(grp){
+  return ST_SLIDERS[grp].map(function(s){
+    var v = Math.round((grp === "body" ? scene.body[s.k] : scene.pose[s.k]) * s.mul);
+    return '<div class="st-row"><span class="lab">'+s.lab+'</span>'
+      + '<input class="sl" type="range" data-sl="'+s.k+'" data-grp="'+grp+'" data-mul="'+s.mul+'" '
+      + 'min="'+s.min+'" max="'+s.max+'" value="'+v+'" aria-label="'+s.lab+'"></div>';
+  }).join("");
+}
+function pillsHTML(list, attr){
+  return list.map(function(p,i){ return '<button type="button" class="pill" '+attr+'="'+i+'">'+esc(p.name)+'</button>'; }).join("");
+}
+function chipsHTML(set, cur, attr){
+  var k, out = "";
+  for(k in set) out += '<button type="button" class="chip" '+attr+'="'+k+'" aria-selected="'+(cur===k)+'">'+esc(set[k].name)+'</button>';
+  return out;
+}
+function swatchHTML(key, val){
+  var pal = COLOR_FIELDS.cloth.palette, i;
+  var out = '<input type="color" data-cin="'+key+'" value="'+val+'" aria-label="Pick a colour">';
+  for(i=0;i<pal.length;i++)
+    out += '<button type="button" class="sw" data-cw="'+key+'" data-v="'+pal[i]+'" style="background:'+pal[i]+'" aria-pressed="'+(val===pal[i])+'" aria-label="'+pal[i]+'"></button>';
+  return out;
+}
+function colRow(lab, key, val){ return '<div class="st-row"><span class="lab">'+lab+'</span>'+swatchHTML(key,val)+'</div>'; }
+
+function stBuildPose(){
+  stPanelEl("pose").innerHTML =
+    '<div class="st-row"><span class="lab">Poses</span><div class="pills">'+pillsHTML(POSES,"data-pose")+'</div></div>'
+    + '<div class="st-row">'
+    + '<button class="btn btn-sm" id="stMirror">Mirror</button>'
+    + '<button class="btn btn-sm" id="stPoseRand">Random pose</button>'
+    + '<button class="btn btn-sm" id="stPoseReset">Reset pose</button>'
+    + '<label class="check"><input type="checkbox" id="stJointsOn"'+(stJoints?" checked":"")+'> Show joints</label>'
+    + '</div>'
+    + slidersHTML("pose")
+    + '<p class="hint">Drag the white dots on the picture. Elbows and knees bend the limb, the dot above the head turns it, the yellow one moves the whole body.</p>';
+}
+function stBuildBody(){
+  stPanelEl("body").innerHTML =
+    slidersHTML("body")
+    + colRow("Skin", "skin", state.skin)
+    + '<div class="st-row"><button class="btn btn-sm" id="stToFace">Edit the face &rarr;</button>'
+    + '<button class="btn btn-sm" id="stBodyReset">Normal build</button></div>'
+    + '<p class="hint">The head is your character from the face maker, so hair, hats and expressions all come along.</p>';
+}
+function bgChips(){
+  var k, out = "";
+  for(k in BGS) out += '<button type="button" class="chip" data-bg="'+k+'" aria-selected="'+(scene.bg===k)+'">'+esc(BGS[k].name)+'</button>';
+  return out;
+}
+function stBuildOutfit(){
+  stPanelEl("outfit").innerHTML =
+    '<div class="st-row"><span class="lab">Outfits</span><div class="pills">'+pillsHTML(OUTFITS,"data-fit")+'</div></div>'
+    + '<div class="st-row"><span class="lab">Top</span><div class="chips">'+chipsHTML(TOPS, scene.outfit.top, "data-top")+'</div></div>'
+    + '<div class="st-row"><span class="lab">Bottom</span><div class="chips">'+chipsHTML(BOTTOMS, scene.outfit.bottom, "data-bot")+'</div></div>'
+    + '<div class="st-row"><span class="lab">Shoes</span><div class="chips">'+chipsHTML(SHOES, scene.outfit.shoes, "data-shoe")+'</div></div>'
+    + colRow("Top colour", "topC", scene.outfit.topC)
+    + colRow("Top trim", "topC2", scene.outfit.topC2)
+    + colRow("Bottoms", "botC", scene.outfit.botC)
+    + colRow("Shoes", "shoeC", scene.outfit.shoeC)
+    + '<div class="st-row"><span class="lab">Backdrop</span><div class="chips">'+bgChips()+'</div></div>'
+    + '<div class="st-row"><label class="check"><input type="checkbox" id="stGround"'+(scene.ground!==false?" checked":"")+'> Shadow on the floor</label>'
+    + '<label class="check"><input type="checkbox" id="stTransBg"'+(stTrans?" checked":"")+'> See-through when saved</label></div>';
+}
+function stBuildAdd(){
+  var k, shapes = "", stamps = "";
+  for(k in SHAPES){
+    shapes += '<button type="button" class="mini" data-shape="'+k+'" title="'+esc(SHAPES[k])+'">'
+      + '<svg viewBox="-4 -4 108 108">' + shapeBody({ kind:k, w:100, h:100, fill:"#8ed0ff", ink:true, sw:6 }) + '</svg>'
+      + '<span class="cap">'+esc(SHAPES[k])+'</span></button>';
+  }
+  for(k in STAMPS){
+    stamps += '<button type="button" class="mini" data-stamp="'+k+'" title="'+esc(STAMPS[k].name)+'">'
+      + '<svg viewBox="-4 -4 108 108">' + STAMPS[k].d("#8ed0ff") + '</svg>'
+      + '<span class="cap">'+esc(STAMPS[k].name)+'</span></button>';
+  }
+  stPanelEl("add").innerHTML =
+    '<div class="st-row"><span class="lab">Colour</span>'+swatchHTML("pen", stPen.color)+'</div>'
+    + '<div class="st-row"><input type="text" id="stText" maxlength="40" placeholder="Type some words" aria-label="Words to add">'
+    + '<button class="btn btn-sm btn-mint" id="stAddText">Add words</button></div>'
+    + '<p class="qlab" style="margin:13px 0 7px">Shapes</p><div class="grid-mini">'+shapes+'</div>'
+    + '<p class="qlab" style="margin:15px 0 7px">Props</p><div class="grid-mini">'+stamps+'</div>';
+}
+function stBuildDraw(){
+  stPanelEl("draw").innerHTML =
+    '<div class="seg" id="stTools" role="group" aria-label="Tool">'
+    + '<button type="button" data-tool="pick" aria-pressed="'+(stTool==="pick")+'">Pick up</button>'
+    + '<button type="button" data-tool="pen" aria-pressed="'+(stTool==="pen")+'">Draw</button>'
+    + '<button type="button" data-tool="erase" aria-pressed="'+(stTool==="erase")+'">Rub out</button>'
+    + '</div>'
+    + colRow("Pen", "pen", stPen.color)
+    + '<div class="st-row"><span class="lab">Thickness</span><input class="sl" type="range" id="stPenW" min="2" max="34" value="'+stPen.w+'" aria-label="Pen thickness"></div>'
+    + '<div class="st-row"><label class="check"><input type="checkbox" id="stPenFill"'+(stPen.solid?" checked":"")+'> Fill the loop in</label></div>'
+    + '<div class="st-row"><button class="btn btn-sm" id="stClearDraw">Rub out every drawing</button></div>'
+    + '<p class="hint">Draw straight onto the picture. Each stroke becomes its own sticker, so you can move it, resize it or pin it to a hand afterwards.</p>';
+}
+function stBuildLayers(){
+  var out = "", i, o, nm;
+  for(i=scene.objs.length-1;i>=0;i--){
+    o = scene.objs[i];
+    nm = o.kind === "text" ? ('"'+o.text+'"')
+       : o.kind === "stamp" ? (STAMPS[o.stamp] ? STAMPS[o.stamp].name : "Prop")
+       : o.kind === "path" ? "Drawing" : (SHAPES[o.kind] || "Shape");
+    out += '<div class="lay'+(o.id===stSel?" on":"")+'" data-lay="'+o.id+'">'
+      + '<span class="chipdot" style="background:'+(o.fill||"#888")+'"></span>'
+      + '<span class="nm">'+esc(nm)+(o.attach && o.attach !== "world" ? " &middot; pinned" : "")+'</span>'
+      + '<button class="btn btn-sm btn-ico" data-up="'+o.id+'" title="Move up" aria-label="Move up">&#8593;</button>'
+      + '<button class="btn btn-sm btn-ico" data-down="'+o.id+'" title="Move down" aria-label="Move down">&#8595;</button>'
+      + '<button class="btn btn-sm btn-ico" data-del="'+o.id+'" title="Delete" aria-label="Delete">&#10005;</button>'
+      + '</div>';
+  }
+  stPanelEl("layers").innerHTML = out
+    ? out + '<div class="st-row"><button class="btn btn-sm" id="stClearAll">Clear everything</button></div>'
+    : '<p class="empty">Nothing added yet. Try <strong>Add</strong> for shapes and props, or <strong>Draw</strong> to scribble.</p>';
+}
+function stBuildProps(){
+  var o = stObj(stSel), box = $("stProps");
+  if(!box) return;
+  if(!o){ box.hidden = true; box.innerHTML = ""; return; }
+  box.hidden = false;
+  var opts = JOINT_LIST.map(function(j){
+    return '<option value="'+j.k+'"'+((o.attach||"world") === j.k ? " selected" : "")+'>'+esc(j.lab)+'</option>';
+  }).join("");
+  box.innerHTML =
+    '<div class="st-row"><span class="lab">Colour</span>'+swatchHTML("sel", o.fill || "#4a6fd1")+'</div>'
+    + '<div class="st-row"><span class="lab">Pin it to</span>'
+    + '<select id="stAttach" aria-label="Pin this to a body part"><option value="world">Nothing, it stays put</option>'+opts+'</select></div>'
+    + '<div class="st-row"><span class="lab">See-through</span>'
+    + '<input class="sl" type="range" id="stOpacity" min="10" max="100" value="'+Math.round((o.op === undefined ? 1 : o.op)*100)+'" aria-label="See-through"></div>'
+    + '<div class="st-row">'
+    + '<button class="btn btn-sm" data-act="front">To front</button>'
+    + '<button class="btn btn-sm" data-act="back">To back</button>'
+    + '<button class="btn btn-sm" data-act="flip">Flip</button>'
+    + '<button class="btn btn-sm" data-act="dup">Copy</button>'
+    + '<button class="btn btn-sm btn-coral" data-act="del">Delete</button></div>'
+    + '<div class="st-row"><label class="check"><input type="checkbox" data-chk="behind"'+(o.back?" checked":"")+'> Behind the character</label>'
+    + (o.kind === "path" || o.kind === "stamp" ? "" : '<label class="check"><input type="checkbox" data-chk="ink"'+(o.ink !== false ? " checked":"")+'> Black outline</label>')
+    + '</div>';
+}
+function stBuildAllPanels(){ stBuildPose(); stBuildBody(); stBuildOutfit(); stBuildAdd(); stBuildDraw(); }
+
+function stRefresh(){
+  stDraw();
+  stBuildLayers();
+  stBuildProps();
+  stUpdateUndo();
+  $("stCanvas").className = "st-canvas" + (stTool === "pen" ? " pen" : stTool === "erase" ? " erase" : "");
+}
+
+/* ---------- presets ---------- */
+function stSetPose(i){
+  scene.pose = poseFrom(POSES[i].p);
+  Snd.shuffle(); stPush(); stRefresh(); stBuildPose();
+  toast(POSES[i].name);
+}
+function stRandomPose(){
+  var p = scene.pose, r = function(a){ return Math.round((Math.random()*2-1)*a); };
+  p.aUL = r(150); p.aLL = clamp(r(90), -95, 20); p.aUR = r(150); p.aLR = clamp(r(90), -20, 95);
+  p.lUL = clamp(r(55), -60, 18); p.lLL = clamp(r(80), -8, 80);
+  p.lUR = clamp(r(55), -18, 60); p.lLR = clamp(r(80), -80, 8);
+  p.tilt = r(16); p.neck = r(10); p.lean = r(12);
+  Snd.shuffle(); stPush(); stRefresh(); stBuildPose();
+}
+function stSetOutfit(i){
+  var o = OUTFITS[i].o, k;
+  for(k in o) scene.outfit[k] = o[k];
+  Snd.shuffle(); stPush(); stRefresh(); stBuildOutfit();
+  toast(OUTFITS[i].name);
+}
+
+/* ---------- saving ---------- */
+function stFileName(ext){
+  var base = charName.replace(/[^a-z0-9 _-]/gi,"").trim().replace(/\s+/g,"-");
+  return "MeMake-" + (base || "studio") + "." + ext;
+}
+function stSVGString(size){
+  var w = Math.round(size * BODY_W / BODY_H);
+  return studioMarkup(state, scene, "save", { transparent:stTrans, alt:(charName || "MeMake character") })
+    .replace("<svg ", '<svg width="'+w+'" height="'+size+'" ');
+}
+function stRaster(cb, fail){
+  var size = exportSize, w = Math.round(size * BODY_W / BODY_H);
+  var img = new Image();
+  img.onload = function(){
+    var cv = document.createElement("canvas");
+    cv.width = w; cv.height = size;
+    cv.getContext("2d").drawImage(img, 0, 0, w, size);
+    if(cv.toBlob) cv.toBlob(function(b){ b ? cb(b, size, cv) : fail(cv); }, "image/png");
+    else fail(cv);
+  };
+  img.onerror = function(){ fail(); };
+  img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stSVGString(size));
+}
+function stSavePNG(){
+  stRaster(function(blob, size){
+    saveBlob(blob, stFileName("png"));
+    Snd.shutter(); sparkle(4);
+    toast("Saved a " + size + "px tall PNG");
+  }, function(cv){
+    if(cv && cv.toDataURL){
+      var a = document.createElement("a");
+      a.href = cv.toDataURL("image/png"); a.download = stFileName("png"); a.click();
+      toast("Saved a PNG");
+    } else { Snd.err(); toast("That picture didn't render — try the SVG", true); }
+  });
+}
+function stSaveSVG(){
+  saveBlob(new Blob([stSVGString(1280)], {type:"image/svg+xml"}), stFileName("svg"));
+  Snd.chime(); toast("Saved an SVG you can scale to any size");
+}
+function stCopyImage(){
+  if(!(navigator.clipboard && window.ClipboardItem)){ Snd.err(); toast("This browser won't copy images — use Save PNG", true); return; }
+  stRaster(function(blob){
+    navigator.clipboard.write([new window.ClipboardItem({"image/png": blob})]).then(function(){
+      Snd.chime(); toast("Picture copied — paste it anywhere");
+    }, function(){ Snd.err(); toast("The browser blocked the copy — use Save PNG", true); });
+  }, function(){ Snd.err(); toast("Couldn't build that picture", true); });
+}
+function stShelfAdd(){
+  var nm = charName.trim() || ("Pose " + (shelf.length + 1));
+  shelf.unshift({ code: encodeState(state), name: nm, at: Date.now(), studio: JSON.parse(JSON.stringify(scene)) });
+  if(shelf.length > 60) shelf.length = 60;
+  saveShelf(); renderShelf();
+  Snd.chime(); sparkle(3);
+  toast(store.ok ? ("Put " + nm + " on the shelf") : ("Added " + nm + " — this browser won't keep it after a reload"));
+}
+function packScene(){
+  try{
+    return btoa(encodeURIComponent(JSON.stringify({
+      pose:scene.pose, body:scene.body, outfit:scene.outfit, bg:scene.bg, ground:scene.ground, objs:scene.objs
+    }))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  }catch(e){ return null; }
+}
+function unpackScene(s){
+  try{
+    var b = String(s).replace(/-/g,"+").replace(/_/g,"/");
+    while(b.length % 4) b += "=";
+    return cleanScene(JSON.parse(decodeURIComponent(atob(b))));
+  }catch(e){ return null; }
+}
+function stLink(){
+  var url = location.href.split("#")[0] + "#v=studio&c=" + encodeState(state)
+          + (charName ? "&n=" + encodeURIComponent(charName) : "");
+  var packed = packScene();
+  if(packed && (url.length + packed.length) < 7800) url += "&s=" + packed;
+  else toast("The scene is too big for a link — use Save SVG or the shelf");
+  copyText(url, "Link copied — it opens straight to this scene");
+}
+
+/* ---------- wiring ---------- */
+function stInit(){
+  $("stTabs").innerHTML = ST_TABS.map(function(t){
+    return '<button type="button" class="chip" data-sttab="'+t.k+'" role="tab" aria-selected="'+(t.k===stTab)+'">'+t.lab+'</button>';
+  }).join("");
+
+  var raw = store.get(ST_KEY.scene);
+  if(raw && !hashScene){ try{ scene = cleanScene(JSON.parse(raw).s); }catch(e){} }
+
+  stBuildAllPanels();
+  stShowTab(stTab);
+  stHist = []; stHi = -1;
+  stPush();
+
+  var cv = $("stCanvas");
+  cv.addEventListener("pointerdown", stDown);
+  cv.addEventListener("pointermove", stMove);
+  cv.addEventListener("pointerup", stUp);
+  cv.addEventListener("pointercancel", stUp);
+
+  $("stBack").addEventListener("click", function(){ showView("maker"); });
+  $("stUndo").addEventListener("click", stUndo);
+  $("stRedo").addEventListener("click", stRedo);
+  $("stRandom").addEventListener("click", stRandomPose);
+  $("stPng").addEventListener("click", stSavePNG);
+  $("stSvg").addEventListener("click", stSaveSVG);
+  $("stCopy").addEventListener("click", stCopyImage);
+  $("stShelf").addEventListener("click", stShelfAdd);
+  $("stLinkBtn").addEventListener("click", stLink);
+  $("stHelpBtn").addEventListener("click", function(){ $("helpVeil").hidden = false; });
+
+  $("stTabs").addEventListener("click", function(e){
+    var b = e.target.closest("[data-sttab]");
+    if(b){ stShowTab(b.dataset.sttab); Snd.tick(); }
+  });
+  $("stPanels").addEventListener("click", stPanelClick);
+  $("stPanels").addEventListener("input", stPanelInput);
+  $("stPanels").addEventListener("change", stPanelChange);
+  $("stProps").addEventListener("click", stPropClick);
+  $("stProps").addEventListener("input", stPropInput);
+  $("stProps").addEventListener("change", stPropInput);
+}
+function stShowTab(k){
+  stTab = k;
+  Array.prototype.forEach.call(document.querySelectorAll(".st-panel"), function(p){
+    p.hidden = p.dataset.tab !== k;
+  });
+  Array.prototype.forEach.call($("stTabs").querySelectorAll("[data-sttab]"), function(b){
+    b.setAttribute("aria-selected", b.dataset.sttab === k ? "true" : "false");
+  });
+  if(k !== "draw" && stTool !== "pick"){ stTool = "pick"; stBuildDraw(); }
+  stRefresh();
+}
+function stSetTool(t){
+  stTool = t; stSel = null;
+  stBuildDraw(); stRefresh();
+  toast(t === "pen" ? "Draw right on the picture" : t === "erase" ? "Tap a sticker to rub it out" : "Back to picking things up");
+}
+function stPanelClick(e){
+  var t = e.target, b;
+  if((b = t.closest("[data-pose]")))  return stSetPose(+b.dataset.pose);
+  if((b = t.closest("[data-fit]")))   return stSetOutfit(+b.dataset.fit);
+  if((b = t.closest("[data-top]")))   return stSetWear("top", b.dataset.top);
+  if((b = t.closest("[data-bot]")))   return stSetWear("bottom", b.dataset.bot);
+  if((b = t.closest("[data-shoe]")))  return stSetWear("shoes", b.dataset.shoe);
+  if((b = t.closest("[data-bg]")))    { scene.bg = b.dataset.bg; Snd.blip(3); stPush(); stRefresh(); return stBuildOutfit(); }
+  if((b = t.closest("[data-shape]"))) return stAddShape(b.dataset.shape);
+  if((b = t.closest("[data-stamp]"))) return stAddStamp(b.dataset.stamp);
+  if((b = t.closest("[data-cw]")))    return stPickColor(b.dataset.cw, b.dataset.v);
+  if((b = t.closest("[data-tool]")))  return stSetTool(b.dataset.tool);
+  if((b = t.closest("[data-up]")))    { stSel = b.dataset.up; return stArrange(1); }
+  if((b = t.closest("[data-down]")))  { stSel = b.dataset.down; return stArrange(-1); }
+  if((b = t.closest("[data-del]")))   { stSel = b.dataset.del; return stDelSel(); }
+  if((b = t.closest("[data-lay]")))   { stSel = b.dataset.lay; Snd.tick(); return stRefresh(); }
+  switch(t.id){
+    case "stMirror":    scene.pose = mirrorPose(scene.pose); Snd.whoosh(); stPush(); stRefresh(); stBuildPose(); break;
+    case "stPoseRand":  stRandomPose(); break;
+    case "stPoseReset": scene.pose = clonePose(DEFAULT_POSE); Snd.tick(); stPush(); stRefresh(); stBuildPose(); break;
+    case "stBodyReset": scene.body = { hs:0.66, thick:1, legs:1, tall:1 }; Snd.tick(); stPush(); stRefresh(); stBuildBody(); break;
+    case "stToFace":    showView("maker"); break;
+    case "stAddText":   stAddText(); break;
+    case "stClearDraw":
+      scene.objs = scene.objs.filter(function(o){ return o.kind !== "path"; });
+      stSel = null; Snd.whoosh(); stPush(); stRefresh(); toast("Drawings rubbed out"); break;
+    case "stClearAll":
+      scene.objs = []; stSel = null; Snd.whoosh(); stPush(); stRefresh(); toast("Cleared"); break;
+  }
+}
+function stSetWear(slot, val){
+  scene.outfit[slot] = val;
+  Snd.blip(4); stPush(); stRefresh(); stBuildOutfit();
+}
+function stPickColor(key, val){
+  if(key === "pen") stPen.color = val;
+  else if(key === "skin"){ state.skin = val; pushHistory(); }
+  else if(key === "sel"){ var o = stObj(stSel); if(o) o.fill = val; }
+  else scene.outfit[key] = val;
+  Snd.plink(val);
+  stPush(); stRefresh();
+  if(key === "pen"){ stBuildAdd(); stBuildDraw(); }
+  else if(key === "skin") stBuildBody();
+  else if(key !== "sel") stBuildOutfit();
+}
+function stPanelInput(e){
+  var t = e.target;
+  if(t.dataset && t.dataset.sl){
+    var v = +t.value / (+t.dataset.mul || 1);
+    if(t.dataset.grp === "body") scene.body[t.dataset.sl] = v;
+    else scene.pose[t.dataset.sl] = v;
+    stDraw();
+    return;
+  }
+  if(t.id === "stPenW"){ stPen.w = +t.value; return; }
+  if(t.dataset && t.dataset.cin) return stPickColor(t.dataset.cin, t.value);
+}
+function stPanelChange(e){
+  var t = e.target;
+  if(t.dataset && t.dataset.sl){ Snd.tick(); stPush(); stRefresh(); return; }
+  if(t.id === "stJointsOn"){ stJoints = t.checked; stDraw(); return; }
+  if(t.id === "stGround"){ scene.ground = t.checked; stPush(); stRefresh(); return; }
+  if(t.id === "stTransBg"){ stTrans = t.checked; stDraw(); return; }
+  if(t.id === "stPenFill"){ stPen.solid = t.checked; return; }
+}
+function stPropClick(e){
+  var t = e.target, b = t.closest("[data-cw]"), o;
+  if(b) return stPickColor("sel", b.dataset.v);
+  b = t.closest("[data-act]");
+  o = stObj(stSel);
+  if(!b || !o) return;
+  switch(b.dataset.act){
+    case "front": stArrange("front"); break;
+    case "back":  stArrange("back"); break;
+    case "flip":  o.flip = !o.flip; Snd.tick(); stPush(); stRefresh(); break;
+    case "dup":   stDup(); break;
+    case "del":   stDelSel(); break;
+  }
+}
+function stPropInput(e){
+  var t = e.target, o = stObj(stSel);
+  if(!o) return;
+  if(t.dataset.cin) return stPickColor("sel", t.value);
+  if(t.id === "stOpacity"){ o.op = +t.value/100; stDraw(); return; }
+  if(t.id === "stAttach"){
+    var frames = stFrames(), from = frames[o.attach || "world"], to = frames[t.value] || frames.world;
+    var world = frameWorld({ x:o.x, y:o.y }, from), l = frameLocal(world, to);
+    o.x = l.x; o.y = l.y;
+    o.rot = norm180((o.rot||0) + from.a - to.a);
+    o.attach = t.value;
+    Snd.chime(); stPush(); stRefresh();
+    if(t.value !== "world") toast("Pinned — it moves with the pose now");
+    return;
+  }
+  if(t.dataset.chk === "behind"){ o.back = t.checked; stPush(); stRefresh(); return; }
+  if(t.dataset.chk === "ink"){ o.ink = t.checked; stPush(); stRefresh(); return; }
+}
+
+/* ---------- keyboard, studio only ---------- */
+function stKey(e){
+  var o = stObj(stSel), step = e.shiftKey ? 12 : 2;
+  if(e.key === "Escape"){ if(stSel){ stSel = null; stRefresh(); } return; }
+  if((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "Z")){ e.preventDefault(); stUndo(); return; }
+  if((e.ctrlKey || e.metaKey) && (e.key === "y" || e.key === "Y")){ e.preventDefault(); stRedo(); return; }
+  if(e.ctrlKey || e.metaKey || e.altKey) return;
+  if(o && (e.key === "Delete" || e.key === "Backspace")){ e.preventDefault(); stDelSel(); return; }
+  if(o && e.key.indexOf("Arrow") === 0){
+    e.preventDefault();
+    if(e.key === "ArrowLeft")  o.x -= step;
+    if(e.key === "ArrowRight") o.x += step;
+    if(e.key === "ArrowUp")    o.y -= step;
+    if(e.key === "ArrowDown")  o.y += step;
+    stDraw(); stPush();
+    return;
+  }
+  switch(e.key){
+    case "p": case "P": stSetTool("pen"); break;
+    case "v": case "V": stSetTool("pick"); break;
+    case "e": case "E": stSetTool("erase"); break;
+    case "j": case "J": stJoints = !stJoints; stDraw(); stBuildPose(); break;
+    case "d": case "D": stRandomPose(); break;
+    case "s": case "S": stSavePNG(); break;
+    case "a": case "A": stShelfAdd(); break;
+    case "m": case "M": $("soundBtn").click(); break;
+    case "n": case "N": $("themeBtn").click(); break;
+    case "?": $("helpVeil").hidden = false; break;
+  }
 }
 
 /* =====================================================================
@@ -2364,7 +3766,7 @@ function renderShelf(){
     card = document.createElement("div");
     card.style.position = "relative";
     card.innerHTML = '<button type="button" class="card" data-load="'+i+'" title="Load this one">'
-      + svgMarkup(st, "sh"+i, "0 0 400 400", {})
+      + (it.studio ? studioMarkup(st, cleanScene(it.studio), "shs"+i, {}) : svgMarkup(st, "sh"+i, "0 0 400 400", {}))
       + '<span class="nm">'+esc(it.name || "Unnamed")+'</span></button>'
       + '<button type="button" class="x" data-del="'+i+'" aria-label="Remove '+esc(it.name||"this one")+'">&#10005;</button>';
     box.appendChild(card);
@@ -2384,8 +3786,13 @@ function loadFromShelf(i){
   if(!st){ Snd.err(); toast("That one wouldn't load", true); return; }
   delete st.fuzzy;
   state = st; charName = it.name || "";
-  $("nameInput").value = charName;
-  pushHistory(); refresh();
+  $("nameInput").value = charName; $("stName").value = charName;
+  pushHistory();
+  if(it.studio){
+    scene = cleanScene(it.studio);
+    stPush();
+    showView("studio");
+  } else refresh();
   Snd.whoosh(); toast("Loaded " + (it.name || "it"));
 }
 function delFromShelf(i){
@@ -2407,7 +3814,8 @@ function importShelf(file){
     if(!items){ Snd.err(); toast("That file isn't a MeMake shelf", true); return; }
     for(i=0;i<items.length;i++){
       if(items[i] && items[i].code && decodeState(items[i].code)){
-        shelf.unshift({ code:items[i].code, name:items[i].name || "Unnamed", at:items[i].at || Date.now() });
+        shelf.unshift({ code:items[i].code, name:items[i].name || "Unnamed", at:items[i].at || Date.now(),
+                        studio: items[i].studio ? cleanScene(items[i].studio) : undefined });
         added++;
       }
     }
@@ -2463,6 +3871,11 @@ function copyText(text, okMsg){
 function readHash(){
   var h = location.hash.replace(/^#/,"");
   if(!h) return false;
+  var sc = /(?:^|&)s=([^&]+)/.exec(h);
+  if(sc){
+    var got = unpackScene(sc[1]);
+    if(got){ scene = got; hashScene = true; }
+  }
   var m = /(?:^|&)c=([^&]+)/.exec(h);
   if(!m) return false;
   var st = decodeState(decodeURIComponent(m[1]));
@@ -2472,6 +3885,44 @@ function readHash(){
   var n = /(?:^|&)n=([^&]*)/.exec(h);
   if(n){ try{ charName = decodeURIComponent(n[1]).slice(0,22); }catch(e){} }
   return true;
+}
+
+/* ---------- which half of the app are we in ---------- */
+var view = "maker", hashScene = false;
+function inStudio(){ return view === "studio"; }
+function showView(v){
+  view = v === "studio" ? "studio" : "maker";
+  var st = inStudio();
+  $("makerView").hidden = st;
+  $("studioView").hidden = !st;
+  document.body.classList.toggle("studio-on", st);
+  if(st){
+    $("stName").value = charName;
+    stRefresh();
+    if(location.hash.indexOf("v=studio") < 0 && !/\/studio\/?$/.test(location.pathname)) setHash("#v=studio");
+  } else {
+    $("nameInput").value = charName;
+    refresh();
+    if(/v=studio/.test(location.hash)) setHash("");
+  }
+  Snd.whoosh();
+  window.scrollTo(0,0);
+}
+var hashLock = false;
+function setHash(h){
+  hashLock = true;
+  if(h) location.hash = h;
+  else if(location.hash){
+    if(history.replaceState) history.replaceState(null, "", location.pathname + location.search);
+    else location.hash = "";
+  }
+  setTimeout(function(){ hashLock = false; }, 0);
+}
+/* memake.lol/studio, #v=studio and plain #studio all land in the studio */
+function wantsStudio(){
+  return /\/studio\/?$/.test(location.pathname)
+      || /(^|[#&])v=studio/.test(location.hash)
+      || /^#\/?studio$/.test(location.hash);
 }
 
 /* ---------- events ---------- */
@@ -2491,6 +3942,15 @@ function init(){
   refresh();
   renderShelf();
   pushHistory();
+  stInit();
+  if(wantsStudio()) showView("studio");
+
+  $("toStudio").addEventListener("click", function(){ showView("studio"); });
+  $("stName").addEventListener("input", function(){
+    charName = this.value.slice(0,22);
+    $("nameInput").value = charName;
+    stDraw();
+  });
 
   $("chips").addEventListener("click", function(e){
     var b = e.target.closest(".chip");
@@ -2592,6 +4052,7 @@ function init(){
   });
   $("nameInput").addEventListener("input", function(){
     charName = this.value;
+    $("stName").value = charName;
     if(cfg.nameOn) drawStage();
   });
   $("nameInput").addEventListener("change", pushHistory);
@@ -2662,6 +4123,13 @@ function init(){
     var t = e.target, typing = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
     var mod = e.ctrlKey || e.metaKey;
 
+    if(inStudio()){
+      if(e.key === "Escape" && !$("helpVeil").hidden){ $("helpVeil").hidden = true; return; }
+      if(typing && !mod && e.key !== "Escape") return;
+      stKey(e);
+      return;
+    }
+
     if(mod && (e.key === "z" || e.key === "Z")){
       e.preventDefault();
       if(e.shiftKey) redo(); else undo();
@@ -2693,7 +4161,16 @@ function init(){
   });
 
   window.addEventListener("hashchange", function(){
-    if(readHash()){ $("nameInput").value = charName; pushHistory(); refresh(); toast("Loaded from the link"); }
+    if(hashLock) return;
+    var loaded = readHash();
+    if(loaded){
+      $("nameInput").value = charName; $("stName").value = charName;
+      pushHistory(); stPush(); refresh();
+      toast("Loaded from the link");
+    }
+    var s = wantsStudio();
+    if(s !== inStudio()) showView(s ? "studio" : "maker");
+    else if(loaded && s) stRefresh();
   });
 }
 
@@ -2706,7 +4183,12 @@ if(typeof document !== "undefined"){
 var API = {
   buildSVG:buildSVG, svgMarkup:svgMarkup, CATS:CATS, LOOKS:LOOKS, MOODS:MOODS, PALETTES:PALETTES,
   encodeState:encodeState, decodeState:decodeState, DEFAULT_STATE:DEFAULT_STATE,
-  state:function(){ return state; }, setState:function(s){ state = s; }, stateKey:stateKey
+  state:function(){ return state; }, setState:function(s){ state = s; }, stateKey:stateKey,
+  studioMarkup:studioMarkup, defaultScene:defaultScene, cleanScene:cleanScene, POSES:POSES,
+  poseFrom:poseFrom, mirrorPose:mirrorPose, OUTFITS:OUTFITS, TOPS:TOPS, BOTTOMS:BOTTOMS,
+  SHOES:SHOES, STAMPS:STAMPS, SHAPES:SHAPES, shapeBody:shapeBody, objMarkup:objMarkup,
+  rigLocal:rigLocal, jointFrames:jointFrames,
+  figFrame:figFrame, scene:function(){ return scene; }
 };
 if(typeof window !== "undefined") window.MeMake = API;
 else if(typeof globalThis !== "undefined") globalThis.MeMake = API;
