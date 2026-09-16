@@ -268,6 +268,9 @@
   .mini:active{transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
   .mini svg{display:block;width:100%;height:auto}
   .mini .cap{display:block;font-size:11px;font-weight:500;padding:2px 0 3px;line-height:1.1}
+  .st-cast{display:flex;align-items:center;gap:8px;margin-top:11px;flex-wrap:wrap}
+  .st-cast .chips{flex:1 1 auto;margin:0}
+  .chip.add{font-weight:700;padding:5px 12px}
   .tl{
     position:relative;height:34px;margin:2px 0 13px;border:3px solid var(--ink);border-radius:999px;
     background:var(--field);cursor:pointer;
@@ -442,6 +445,9 @@
     <section class="panel" aria-label="Your character">
       <div class="st-canvas" id="stCanvas" title="Drag the dots to pose"></div>
 
+      <div class="st-cast" id="stCast"></div>
+      <input type="file" id="stImgFile" accept="image/*" hidden>
+
       <div class="st-sel" id="stProps" hidden></div>
 
       <div class="name-row">
@@ -466,6 +472,7 @@
         <div class="st-panel" data-tab="add" hidden></div>
         <div class="st-panel" data-tab="draw" hidden></div>
         <div class="st-panel" data-tab="anim" hidden></div>
+        <div class="st-panel" data-tab="scene" hidden></div>
         <div class="st-panel" data-tab="layers" hidden></div>
       </div>
     </section>
@@ -2073,7 +2080,7 @@ function atFrame(x,y,a,s){
 }
 
 var DEFAULT_POSE = {
-  x:0, y:0, lean:0, neck:0, tilt:0,
+  x:0, y:0, s:1, lean:0, neck:0, tilt:0,
   aUL:-10, aLL:-5, aUR:10, aLR:5,
   lUL:-5, lLL:3, lUR:5, lLR:-3,
   fL:0, fR:0
@@ -2106,15 +2113,25 @@ function rigLocal(p, b){
 }
 
 /* figure placement: hip space -> canvas space */
-function figFrame(sc){ return { ox:200 + sc.pose.x, oy:400 + sc.pose.y, a:sc.pose.lean }; }
+function sceneW(sc){ return (sc && sc.w) || BODY_W; }
+function sceneH(sc){ return (sc && sc.h) || BODY_H; }
+function sceneVB(sc){ return "0 0 " + sceneW(sc) + " " + sceneH(sc); }
+/* where a character stands on the canvas, and how big */
+function figFrame(ch, sc){
+  return { ox: sceneW(sc)/2 + ch.pose.x, oy: sceneH(sc)*0.625 + ch.pose.y,
+           a: ch.pose.lean, s: ch.pose.s === undefined ? 1 : ch.pose.s };
+}
 function toWorld(pt, F){
-  var r = F.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r);
-  return { x: F.ox + pt.x*c - pt.y*s, y: F.oy + pt.x*s + pt.y*c };
+  var r = F.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r), k = F.s === undefined ? 1 : F.s;
+  return { x: F.ox + (pt.x*c - pt.y*s)*k, y: F.oy + (pt.x*s + pt.y*c)*k };
 }
 function toLocalPt(pt, F){
-  var r = -F.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r);
-  var dx = pt.x - F.ox, dy = pt.y - F.oy;
+  var r = -F.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r), k = F.s === undefined ? 1 : F.s;
+  var dx = (pt.x - F.ox)/k, dy = (pt.y - F.oy)/k;
   return { x: dx*c - dy*s, y: dx*s + dy*c };
+}
+function atScale(x,y,a,k,s){
+  return '<g transform="translate('+N1(x)+','+N1(y)+') rotate('+N1(a)+')'+(k===1?"":' scale('+k.toFixed(3)+')')+'">'+s+'</g>';
 }
 
 /* every point you can grab, and every place a prop can be pinned */
@@ -2133,9 +2150,10 @@ var JOINT_LIST = [
   { k:"footR",  lab:"Foot (right)" }
 ];
 function jointFrames(R, F){
-  function w(pt, a){ var p = toWorld(pt, F); return { x:p.x, y:p.y, a:F.a + a }; }
+  var K = F.s === undefined ? 1 : F.s;
+  function w(pt, a){ var p = toWorld(pt, F); return { x:p.x, y:p.y, a:F.a + a, s:K }; }
   return {
-    world:  { x:0, y:0, a:0 },
+    world:  { x:0, y:0, a:0, s:1 },
     root:   w(R.hip, 0),
     hip:    w(R.hip, 0),
     chest:  w(R.chest, 0),
@@ -2215,15 +2233,16 @@ var POSES = [
   { name:"Dance",  p:{ lean:-7, aUL:-152, aLL:-28, aUR:46, aLR:-72, lUL:-16, lLL:10, lUR:38, lLR:-58, fR:18 } },
   { name:"Shy",    p:{ tilt:9, neck:5, aUL:-16, aLL:44, aUR:16, aLR:-44, lUL:-2, lUR:14, lLR:-20 } }
 ];
-function poseFrom(preset){
+function poseFrom(preset, keepScale){
   var p = clonePose(DEFAULT_POSE), k;
   for(k in preset) if(k in p) p[k] = preset[k];
+  if(keepScale !== undefined) p.s = keepScale;
   return p;
 }
 function mirrorPose(p){
   var q = clonePose(p), sw = [["aUL","aUR"],["aLL","aLR"],["lUL","lUR"],["lLL","lLR"],["fL","fR"]], i;
   for(i=0;i<sw.length;i++){ q[sw[i][0]] = -p[sw[i][1]]; q[sw[i][1]] = -p[sw[i][0]]; }
-  q.x = -p.x; q.lean = -p.lean; q.neck = -p.neck; q.tilt = -p.tilt;
+  q.x = -p.x; q.lean = -p.lean; q.neck = -p.neck; q.tilt = -p.tilt; q.s = p.s;
   return q;
 }
 
@@ -2250,8 +2269,9 @@ function footArt(ang, toward, col, sh, skin){
 }
 
 /* the whole puppet, in hip space */
-function figureArt(st, sc, R, uid, opts){
+function figureArt(st, ch, R, uid, opts){
   opts = opts || {};
+  var sc = ch;
   var c = palette(st), o = sc.outfit, top = TOPS[o.top] || TOPS.tee, bot = BOTTOMS[o.bottom] || BOTTOMS.pants;
   var skin = c.skin, aw = RIG.armW*R.thick, lw = RIG.legW*R.thick, hr = RIG.hand*R.thick;
   var topC = o.topC, topC2 = o.topC2, botC = o.botC, shoeC = o.shoeC;
@@ -2468,51 +2488,119 @@ function objBody(o){
     var s = STAMPS[o.stamp] || STAMPS.star;
     return '<g transform="scale('+(o.w/100)+','+(o.h/100)+')">' + s.d(o.fill) + '</g>';
   }
+  if(o.kind === "img"){
+    return '<image href="'+o.href+'" xlink:href="'+o.href+'" x="0" y="0" '
+      + 'width="'+N1(o.w)+'" height="'+N1(o.h)+'" preserveAspectRatio="none"/>'
+      + (o.ink ? '<rect x="0" y="0" width="'+N1(o.w)+'" height="'+N1(o.h)+'" fill="none" stroke="'+(o.stroke||LINE)+'" stroke-width="'+(o.sw||5)+'"/>' : '');
+  }
   return shapeBody(o);
 }
 function objMarkup(o, frames){
-  var f = frames[o.attach || "world"] || frames.world;
+  var key = o.attach || "world", f = frames[key] || frames.world;
   var inner = '<g transform="translate('+N1(o.x)+','+N1(o.y)+') rotate('+N1(o.rot||0)+','+N1(o.w/2)+','+N1(o.h/2)+')'
             + (o.flip ? ' scale(-1,1) translate('+N1(-o.w)+',0)' : '') + '" opacity="'+(o.op===undefined?1:o.op)+'" data-oid="'+o.id+'">'
             + objBody(o) + '</g>';
-  if(!o.attach || o.attach === "world") return inner;
-  return '<g transform="translate('+N1(f.x)+','+N1(f.y)+') rotate('+N1(f.a)+')">' + inner + '</g>';
+  if(key === "world" || !frames[key]) return inner;
+  return atScale(f.x, f.y, f.a, f.s === undefined ? 1 : f.s, inner);
 }
 
+/* ---------- the cast ---------- */
+/* each character keeps its own face (as a share code), pose, build and
+   clothes. The one being edited has its code kept in step with the maker. */
+function defaultChar(id){
+  return {
+    id: id || "c1",
+    name: "",
+    code: null,
+    pose: clonePose(DEFAULT_POSE),
+    body: { hs:0.66, thick:1, legs:1, tall:1 },
+    outfit: { top:"tee", bottom:"pants", shoes:"sneak", topC:"#4a6fd1", topC2:"#ffffff", botC:"#3a3f63", shoeC:"#e05252" },
+    face: { px:0, py:0, blink:0, open:0 }
+  };
+}
+var CHAR_STATES = {};
+function charState(ch, fallback){
+  if(!ch.code) return fallback || state;
+  if(CHAR_STATES[ch.code]) return CHAR_STATES[ch.code];
+  var st = decodeState(ch.code);
+  if(!st) return fallback || state;
+  delete st.fuzzy;
+  var n = 0, k;
+  for(k in CHAR_STATES) n++;
+  if(n > 24) CHAR_STATES = {};
+  CHAR_STATES[ch.code] = st;
+  return st;
+}
+/* an animation key can pin an expression, which sits on top of the face */
+function faceSwap(st, f){
+  if(!f || (!f.eyes && !f.mouth && !f.brows)) return st;
+  var o = cloneState(st);
+  if(EYES[f.eyes]) o.eyes = f.eyes;
+  if(MOUTHS[f.mouth]) o.mouth = f.mouth;
+  if(BROWS[f.brows]) o.brows = f.brows;
+  return o;
+}
+function sceneFrames(sc){
+  var frames = { world:{ x:0, y:0, a:0, s:1 } }, i, ch, jf, k;
+  for(i=0;i<sc.cast.length;i++){
+    ch = sc.cast[i];
+    jf = jointFrames(rigLocal(ch.pose, ch.body), figFrame(ch, sc));
+    for(k in jf) if(k !== "world") frames[ch.id + ":" + k] = jf[k];
+  }
+  return frames;
+}
+function charArt(ch, sc, uid, fallback){
+  var st = faceSwap(charState(ch, fallback), ch.face);
+  var R = rigLocal(ch.pose, ch.body), F = figFrame(ch, sc), out = "", K = F.s;
+  if(sc.ground !== false){
+    var low = Math.max(toWorld(R.anL,F).y, toWorld(R.anR,F).y) + 16*K;
+    out += '<ellipse cx="'+N1(toWorld(R.hip,F).x)+'" cy="'+N1(low)+'" rx="'+N1(76*K)+'" ry="'+N1(15*K)+'" fill="'+LINE+'" opacity="0.13"/>';
+  }
+  return out + '<g data-cid="'+ch.id+'">'
+    + atScale(F.ox, F.oy, F.a, K, figureArt(st, ch, R, uid, { face:ch.face }))
+    + '</g>';
+}
 /* ---------- the whole studio picture ---------- */
 function studioArt(st, sc, uid, opts){
   opts = opts || {};
-  var c = palette(st), out = "", i, o;
-  var R = rigLocal(sc.pose, sc.body), F = figFrame(sc), frames = jointFrames(R, F);
+  var out = "", i, o, frames = sceneFrames(sc);
 
   if(!opts.transparent){
-    var bg = pick(BGS, sc.bg || "fade", "plain");
-    out += '<g transform="translate(-120,0) scale(1.6)">' + bg.draw(c, uid+"b") + '</g>';
+    var w = sceneW(sc), h = sceneH(sc), k = Math.max(w,h)/400;
+    out += '<g transform="translate('+N1((w-400*k)/2)+','+N1((h-400*k)/2)+') scale('+k.toFixed(3)+')">'
+        +  pick(BGS, sc.bg || "fade", "plain").draw(palette(st), uid+"b") + '</g>';
   }
   for(i=0;i<sc.objs.length;i++){ o = sc.objs[i]; if(o.back) out += objMarkup(o, frames); }
-
-  if(sc.ground !== false){
-    var low = Math.max(toWorld(R.anL,F).y, toWorld(R.anR,F).y) + 16;
-    out += '<ellipse cx="'+N1(toWorld(R.hip,F).x)+'" cy="'+N1(low)+'" rx="76" ry="15" fill="'+LINE+'" opacity="0.13"/>';
-  }
-  out += atFrame(F.ox, F.oy, F.a, figureArt(st, sc, R, uid, opts));
-
+  for(i=0;i<sc.cast.length;i++) out += charArt(sc.cast[i], sc, uid+"k"+i, st);
   for(i=0;i<sc.objs.length;i++){ o = sc.objs[i]; if(!o.back) out += objMarkup(o, frames); }
   return out;
 }
 function studioMarkup(st, sc, uid, opts){
   opts = opts || {};
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+BODY_VB+'" preserveAspectRatio="xMidYMid meet" '
+  return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+    + 'viewBox="'+sceneVB(sc)+'" preserveAspectRatio="xMidYMid meet" '
     + 'role="img" aria-label="'+esc(opts.alt || "Your MeMake character")+'">'
     + studioArt(st, sc, uid, opts) + '</svg>';
 }
 
+/* ---------- canvas shapes ---------- */
+var CANVAS_SIZES = [
+  { name:"Portrait", w:400, h:640 },
+  { name:"Square",   w:560, h:560 },
+  { name:"Wide",     w:800, h:450 },
+  { name:"Tall",     w:400, h:712 },
+  { name:"Banner",   w:900, h:360 },
+  { name:"Postcard", w:720, h:520 }
+];
+var FIG_SPAN = 470;   /* roughly head top to heel at scale 1 */
+function fitScale(h){ return clamp(Math.round(((h - 46)/FIG_SPAN)*100)/100, 0.25, 1); }
+
 /* ---------- scene defaults, save and load ---------- */
 function defaultScene(){
   return {
-    pose: clonePose(DEFAULT_POSE),
-    body: { hs:0.66, thick:1, legs:1, tall:1 },
-    outfit: { top:"tee", bottom:"pants", shoes:"sneak", topC:"#4a6fd1", topC2:"#ffffff", botC:"#3a3f63", shoeC:"#e05252" },
+    w:400, h:640,
+    cast: [ defaultChar("c1") ],
+    sel: 0,
     bg: "fade",
     ground: true,
     objs: [],
@@ -2522,7 +2610,7 @@ function defaultScene(){
 }
 /* anything that arrives from a link or a file is treated as hostile: every
    value that ends up inside an SVG attribute gets checked first */
-var OBJ_KINDS = { text:1, path:1, stamp:1 };
+var OBJ_KINDS = { text:1, path:1, stamp:1, img:1 };
 function safeCol(v, fb){
   return (typeof v === "string" && /^#[0-9a-fA-F]{3,8}$/.test(v)) ? v : fb;
 }
@@ -2533,7 +2621,13 @@ function safeNum(v, fb, lo, hi){
 function safePath(v){
   return (typeof v === "string" && v.length < 60000) ? v.replace(/[^-0-9.,eE\s MLHVQCSTAZmlhvqcstaz]/g, "") : "";
 }
-function cleanObj(raw, id){
+/* an imported picture must be a picture, baked into the file. No fetching
+   anything from anywhere, whatever a shared link claims. */
+function safeData(v){
+  if(typeof v !== "string" || v.length > 6000000) return "";
+  return /^data:image\/(png|jpeg|gif|webp);base64,[A-Za-z0-9+\/=]+$/.test(v) ? v : "";
+}
+function cleanObj(raw, id, castIds){
   if(!raw || typeof raw !== "object") return null;
   var kind = String(raw.kind || "");
   if(!OBJ_KINDS[kind] && !SHAPES[kind]) return null;
@@ -2551,10 +2645,14 @@ function cleanObj(raw, id){
     flip: !!raw.flip,
     attach: "world"
   };
-  var j;
-  for(j = 0; j < JOINT_LIST.length; j++) if(JOINT_LIST[j].k === raw.attach) o.attach = raw.attach;
+  o.attach = cleanAttach(raw.attach, castIds);
   if(kind === "text") o.text = String(raw.text === undefined ? "" : raw.text).slice(0, 60);
   if(kind === "stamp") o.stamp = STAMPS[raw.stamp] ? raw.stamp : "star";
+  if(kind === "img"){
+    o.href = safeData(raw.href);
+    if(!o.href) return null;
+    o.ink = !!raw.ink;
+  }
   if(kind === "path"){
     o.d = safePath(raw.d);
     if(!o.d) return null;
@@ -2563,6 +2661,16 @@ function cleanObj(raw, id){
     o.solid = !!raw.solid;
   }
   return o;
+}
+/* "world", or "<character>:<joint>". Older scenes stored a bare joint name,
+   which belonged to the only character there was. */
+function cleanAttach(v, castIds){
+  if(typeof v !== "string" || !v || v === "world" || !castIds || !castIds.length) return "world";
+  var bits = v.split(":"), cid = bits.length > 1 ? bits[0] : castIds[0], joint = bits[bits.length-1], i, ok = false;
+  for(i=0;i<JOINT_LIST.length;i++) if(JOINT_LIST[i].k === joint) ok = true;
+  if(!ok) return "world";
+  for(i=0;i<castIds.length;i++) if(castIds[i] === cid) return cid + ":" + joint;
+  return "world";
 }
 var FACE_KEYS = { px:[-9,9], py:[-7,7], blink:[0,1], open:[0,1] };
 function cleanFace(raw){
@@ -2575,17 +2683,56 @@ function cleanFace(raw){
   }
   return f;
 }
-function cleanAnim(raw, objs){
+function cleanPose(raw, fb){
+  var p = clonePose(fb || DEFAULT_POSE), j;
+  if(raw) for(j in p){
+    if(typeof raw[j] !== "number") continue;
+    p[j] = j === "s" ? safeNum(raw[j], p[j], 0.15, 3) : safeNum(raw[j], p[j], -4000, 4000);
+  }
+  return p;
+}
+function cleanBody(raw, fb){
+  var b = { hs:0.66, thick:1, legs:1, tall:1 }, j;
+  if(fb) for(j in b) b[j] = fb[j];
+  if(raw) for(j in b) if(typeof raw[j] === "number") b[j] = safeNum(raw[j], b[j], 0.2, 2.4);
+  return b;
+}
+function cleanChar(raw, id){
+  var ch = defaultChar(id);
+  if(!raw || typeof raw !== "object") return ch;
+  ch.name = String(raw.name === undefined ? "" : raw.name).slice(0, 22);
+  if(typeof raw.code === "string" && decodeState(raw.code)) ch.code = raw.code;
+  ch.pose = cleanPose(raw.pose);
+  ch.body = cleanBody(raw.body);
+  if(raw.outfit){
+    if(TOPS[raw.outfit.top]) ch.outfit.top = raw.outfit.top;
+    if(BOTTOMS[raw.outfit.bottom]) ch.outfit.bottom = raw.outfit.bottom;
+    if(SHOES[raw.outfit.shoes]) ch.outfit.shoes = raw.outfit.shoes;
+    ch.outfit.topC  = safeCol(raw.outfit.topC,  ch.outfit.topC);
+    ch.outfit.topC2 = safeCol(raw.outfit.topC2, ch.outfit.topC2);
+    ch.outfit.botC  = safeCol(raw.outfit.botC,  ch.outfit.botC);
+    ch.outfit.shoeC = safeCol(raw.outfit.shoeC, ch.outfit.shoeC);
+  }
+  ch.face = cleanFace(raw.face);
+  return ch;
+}
+function cleanAnim(raw, cast, objs){
   if(!raw || !Array.isArray(raw.keys) || !raw.keys.length) return null;
-  var a = { fps: safeNum(raw.fps, 12, 2, 30), loop: raw.loop !== false, keys: [] }, i, j, k, o, src, dst;
+  var a = { fps: safeNum(raw.fps, 12, 2, 30), loop: raw.loop !== false, keys: [] }, i, j, k, o, src, dst, cid;
   for(i=0;i<raw.keys.length && a.keys.length < 60;i++){
     src = raw.keys[i];
     if(!src || typeof src !== "object") continue;
-    k = { t: safeNum(src.t, 0, 0, 60), ease: ANIM_EASE[src.ease] ? src.ease : "inout",
-          pose: clonePose(DEFAULT_POSE), body: { hs:0.66, thick:1, legs:1, tall:1 },
-          face: cleanFace(src.face), objs: {} };
-    if(src.pose) for(j in k.pose) if(typeof src.pose[j] === "number") k.pose[j] = safeNum(src.pose[j], k.pose[j], -720, 720);
-    if(src.body) for(j in k.body) if(typeof src.body[j] === "number") k.body[j] = safeNum(src.body[j], k.body[j], 0.2, 2.4);
+    k = { t: safeNum(src.t, 0, 0, 60), ease: ANIM_EASE[src.ease] ? src.ease : "inout", cast:{}, objs:{} };
+    for(j=0;j<cast.length;j++){
+      cid = cast[j].id;
+      /* older keys held one character's worth of channels at the top level */
+      var from = (src.cast && src.cast[cid]) || (j === 0 && src.pose ? src : null);
+      k.cast[cid] = {
+        pose: cleanPose(from && from.pose, cast[j].pose),
+        body: cleanBody(from && from.body, cast[j].body),
+        face: cleanFace(from && from.face)
+      };
+    }
     if(src.objs) for(j=0;j<objs.length;j++){
       o = src.objs[objs[j].id];
       if(!o) continue;
@@ -2603,28 +2750,39 @@ function cleanAnim(raw, objs){
   return a;
 }
 function cleanScene(raw){
-  var d = defaultScene(), k, i, o;
+  var d = defaultScene(), i, o, ids = [];
   if(!raw || typeof raw !== "object") return d;
-  if(raw.pose) for(k in d.pose) if(typeof raw.pose[k] === "number") d.pose[k] = safeNum(raw.pose[k], d.pose[k], -720, 720);
-  if(raw.body) for(k in d.body) if(typeof raw.body[k] === "number") d.body[k] = safeNum(raw.body[k], d.body[k], 0.2, 2.4);
-  if(raw.outfit){
-    if(TOPS[raw.outfit.top]) d.outfit.top = raw.outfit.top;
-    if(BOTTOMS[raw.outfit.bottom]) d.outfit.bottom = raw.outfit.bottom;
-    if(SHOES[raw.outfit.shoes]) d.outfit.shoes = raw.outfit.shoes;
-    d.outfit.topC  = safeCol(raw.outfit.topC,  d.outfit.topC);
-    d.outfit.topC2 = safeCol(raw.outfit.topC2, d.outfit.topC2);
-    d.outfit.botC  = safeCol(raw.outfit.botC,  d.outfit.botC);
-    d.outfit.shoeC = safeCol(raw.outfit.shoeC, d.outfit.shoeC);
+  d.w = Math.round(safeNum(raw.w, 400, 200, 1600));
+  d.h = Math.round(safeNum(raw.h, 640, 200, 1600));
+  if(Array.isArray(raw.cast) && raw.cast.length){
+    /* keep the ids a scene came with, so anything pinned to a character
+       still finds them after a reload */
+    d.cast = [];
+    var used = {}, rid, num;
+    for(i=0;i<raw.cast.length && i<8;i++){
+      rid = raw.cast[i] && typeof raw.cast[i].id === "string" && /^c[0-9]{1,4}$/.test(raw.cast[i].id) && !used[raw.cast[i].id]
+          ? raw.cast[i].id : null;
+      while(!rid || used[rid]) rid = "c" + (d.seq++);
+      used[rid] = 1;
+      num = parseInt(rid.slice(1), 10);
+      if(isFinite(num) && num >= d.seq) d.seq = num + 1;
+      d.cast.push(cleanChar(raw.cast[i], rid));
+    }
+  } else {
+    /* a scene from before there was a cast: one character, at the top level */
+    d.cast = [ cleanChar({ pose:raw.pose, body:raw.body, outfit:raw.outfit, code:raw.code }, "c1") ];
   }
+  for(i=0;i<d.cast.length;i++) ids.push(d.cast[i].id);
+  d.sel = clamp(Math.round(safeNum(raw.sel, 0, 0, d.cast.length-1)), 0, d.cast.length-1);
   if(typeof raw.bg === "string" && BGS[raw.bg]) d.bg = raw.bg;
   d.ground = raw.ground !== false;
   if(Array.isArray(raw.objs)){
     for(i=0;i<raw.objs.length && d.objs.length < 160;i++){
-      o = cleanObj(raw.objs[i], "o" + (d.seq++));
+      o = cleanObj(raw.objs[i], "o" + (d.seq++), ids);
       if(o) d.objs.push(o);
     }
   }
-  d.anim = cleanAnim(raw.anim, d.objs);
+  d.anim = cleanAnim(raw.anim, d.cast, d.objs);
   return d;
 }
 
@@ -2640,6 +2798,105 @@ var stHist = [], stHi = -1;
 var ST_KEY = { scene:"memake.studio" };
 
 function stPanelEl(k){ return document.querySelector('.st-panel[data-tab="'+k+'"]'); }
+/* the character currently being worked on. Its face is the one in the maker,
+   so the maker's state and this character's code are kept in step. */
+function curChar(){ return scene.cast[scene.sel] || scene.cast[0]; }
+function stSyncSel(){
+  var ch = curChar();
+  if(ch) ch.code = encodeState(state);
+}
+function stPickChar(i){
+  if(i === scene.sel || !scene.cast[i]) return;
+  stSyncSel();
+  scene.sel = i;
+  var st = decodeState(curChar().code);
+  if(st){ delete st.fuzzy; state = st; }
+  charName = curChar().name || charName;
+  animSel = -1;
+  Snd.whoosh();
+  pushHistory();
+  stPush(); stRefresh(); stBuildAllPanels();
+  if($("nameInput")) $("nameInput").value = charName;
+  toast("Now editing " + charLabel(curChar(), i));
+}
+function charLabel(ch, i){ return ch.name || ("Character " + (i+1)); }
+function newCharId(){
+  var id, n = 0, i, taken;
+  do {
+    id = "c" + (scene.seq++);
+    taken = false;
+    for(i=0;i<scene.cast.length;i++) if(scene.cast[i].id === id) taken = true;
+  } while(taken && ++n < 200);
+  return id;
+}
+function stAddChar(copy){
+  if(scene.cast.length >= 6){ Snd.err(); toast("Six characters is plenty", true); return; }
+  stSyncSel();
+  var from = curChar(), ch = defaultChar(newCharId());
+  if(copy){
+    ch.pose = clonePose(from.pose); ch.code = from.code;
+    for(var k in from.body) ch.body[k] = from.body[k];
+    for(var j in from.outfit) ch.outfit[j] = from.outfit[j];
+  } else {
+    var st = cloneState(state);
+    randomiseColors(st);
+    st.hairStyle = randOf(Object.keys(HAIRS));
+    st.eyes = randOf(Object.keys(EYES));
+    st.mouth = randOf(Object.keys(MOUTHS));
+    ch.code = encodeState(st);
+    ch.outfit.topC = randOf(COLOR_FIELDS.cloth.palette);
+    ch.outfit.botC = randOf(COLOR_FIELDS.cloth.palette);
+  }
+  /* stand the newcomer next to the others, on whichever side has room */
+  ch.pose.s = from.pose.s;
+  var minx = 1e9, maxx = -1e9, i2;
+  for(i2=0;i2<scene.cast.length;i2++){
+    minx = Math.min(minx, scene.cast[i2].pose.x);
+    maxx = Math.max(maxx, scene.cast[i2].pose.x);
+  }
+  var gap = 125*(ch.pose.s || 1), lim = sceneW(scene)/2 - 52*(ch.pose.s || 1);
+  var goRight = (maxx + gap <= lim) && (Math.abs(maxx) <= Math.abs(minx) || minx - gap < -lim);
+  ch.pose.x = goRight ? maxx + gap
+            : (minx - gap >= -lim) ? minx - gap
+            : (maxx + gap <= lim) ? maxx + gap
+            : clamp(from.pose.x + gap*0.6, -lim, lim);
+  ch.pose.y = from.pose.y;
+  scene.cast.push(ch);
+  scene.sel = scene.cast.length - 1;
+  var ns = decodeState(ch.code);
+  if(ns){ delete ns.fuzzy; state = ns; }
+  animSel = -1;
+  Snd.chime(); sparkle(2);
+  pushHistory(); stPush(); stRefresh(); stBuildAllPanels();
+  toast(copy ? "Copied — drag it somewhere" : "A new face joins the scene");
+}
+function stDelChar(){
+  if(scene.cast.length < 2){ Snd.err(); toast("There has to be somebody", true); return; }
+  var gone = scene.cast.splice(scene.sel,1)[0], i;
+  /* anything pinned to them comes loose */
+  for(i=0;i<scene.objs.length;i++)
+    if(scene.objs[i].attach && scene.objs[i].attach.indexOf(gone.id + ":") === 0) scene.objs[i].attach = "world";
+  if(scene.anim) for(i=0;i<scene.anim.keys.length;i++) delete scene.anim.keys[i].cast[gone.id];
+  scene.sel = clamp(scene.sel, 0, scene.cast.length-1);
+  var st = decodeState(curChar().code);
+  if(st){ delete st.fuzzy; state = st; }
+  animSel = -1;
+  Snd.tick(); pushHistory(); stPush(); stRefresh(); stBuildAllPanels();
+}
+function stSetSize(i){
+  var z = CANVAS_SIZES[i];
+  if(!z) return;
+  scene.w = z.w; scene.h = z.h;
+  var fit = fitScale(z.h), j, ch;
+  for(j=0;j<scene.cast.length;j++){
+    ch = scene.cast[j];
+    ch.pose.s = fit;
+    ch.pose.x = clamp(ch.pose.x, -z.w/2 + 50, z.w/2 - 50);
+    ch.pose.y = clamp(ch.pose.y, -z.h*0.5, z.h*0.3);
+  }
+  Snd.shuffle(); stPush(); stRefresh(); stBuildScene(); stBuildPose();
+  toast(z.name + " — " + z.w + " by " + z.h);
+}
 function norm180(a){ a = a % 360; if(a > 180) a -= 360; if(a < -180) a += 360; return a; }
 function rotTo(c,p){ return Math.atan2(p.x-c.x, -(p.y-c.y))*180/Math.PI; }
 
@@ -2675,7 +2932,7 @@ function stObj(id){ for(var i=0;i<scene.objs.length;i++) if(scene.objs[i].id ===
 function stIndex(id){ for(var i=0;i<scene.objs.length;i++) if(scene.objs[i].id === id) return i; return -1; }
 function stAdd(o){
   o.id = "o" + (scene.seq++);
-  if(o.x === undefined){ o.x = 300 - o.w/2; o.y = 186 - o.h/2; }
+  if(o.x === undefined){ o.x = sceneW(scene)*0.76 - o.w/2; o.y = sceneH(scene)*0.29 - o.h/2; }
   scene.objs.push(o);
   stSel = o.id;
   Snd.blip(3);
@@ -2706,22 +2963,22 @@ function stArrange(dir){
 function stPt(e){
   var host = $("stCanvas"), svg = host.querySelector("svg");
   var box = (svg || host).getBoundingClientRect();
-  var s = Math.min(box.width/BODY_W, box.height/BODY_H) || 1;
-  var ox = (box.width - BODY_W*s)/2, oy = (box.height - BODY_H*s)/2;
+  var W = sceneW(scene), H = sceneH(scene);
+  var s = Math.min(box.width/W, box.height/H) || 1;
+  var ox = (box.width - W*s)/2, oy = (box.height - H*s)/2;
   return { x:(e.clientX - box.left - ox)/s, y:(e.clientY - box.top - oy)/s };
 }
 function frameLocal(pt, f){
-  var r = -f.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r);
-  var dx = pt.x - f.x, dy = pt.y - f.y;
+  var r = -f.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r), k = f.s === undefined ? 1 : f.s;
+  var dx = (pt.x - f.x)/k, dy = (pt.y - f.y)/k;
   return { x: dx*c - dy*s, y: dx*s + dy*c };
 }
 function frameWorld(pt, f){
-  var r = f.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r);
-  return { x: f.x + pt.x*c - pt.y*s, y: f.y + pt.x*s + pt.y*c };
+  var r = f.a*Math.PI/180, c = Math.cos(r), s = Math.sin(r), k = f.s === undefined ? 1 : f.s;
+  return { x: f.x + (pt.x*c - pt.y*s)*k, y: f.y + (pt.x*s + pt.y*c)*k };
 }
-function stFrames(){
-  return jointFrames(rigLocal(scene.pose, scene.body), figFrame(scene));
-}
+function stFrames(){ return sceneFrames(scene); }
+function stJointKey(j){ return curChar().id + ":" + j; }
 function attrUp(el, name){
   while(el && el.getAttribute){
     var v = el.getAttribute(name);
@@ -2733,10 +2990,10 @@ function attrUp(el, name){
 
 /* ---------- drawing the canvas ---------- */
 function stHandles(){
-  var R = rigLocal(scene.pose, scene.body), F = figFrame(scene), out = "";
+  var ch = curChar(), R = rigLocal(ch.pose, ch.body), F = figFrame(ch, scene), out = "";
   function dot(pt, k, cls){
     var w = toWorld(pt, F);
-    return '<circle class="jd '+(cls||"")+'" data-joint="'+k+'" cx="'+N1(w.x)+'" cy="'+N1(w.y)+'" r="10"/>';
+    return '<circle class="jd '+(cls||"")+'" data-joint="'+k+'" cx="'+N1(w.x)+'" cy="'+N1(w.y)+'" r="'+N1(clamp(10/F.s,6,16))+'"/>';
   }
   out += dot(R.chest, "chest");
   out += dot(R.neck, "head");
@@ -2744,7 +3001,7 @@ function stHandles(){
   out += dot(R.elR, "elbowR") + dot(R.wrR, "handR");
   out += dot(R.knL, "kneeL") + dot(R.anL, "footL");
   out += dot(R.knR, "kneeR") + dot(R.anR, "footR");
-  var top = toWorld(P2(R.neck, 180 + R.headA, 92*scene.body.hs + 24), F);
+  var top = toWorld(P2(R.neck, 180 + R.headA, 92*ch.body.hs + 24/F.s), F);
   out += '<circle class="jd tilt" data-joint="tilt" cx="'+N1(top.x)+'" cy="'+N1(top.y)+'" r="9"/>';
   out += dot(R.hip, "root", "root");
   return '<g class="jlayer">' + out + '</g>';
@@ -2766,21 +3023,23 @@ function stSelUI(){
 }
 function stDraw(){
   animPreview = false;
+  stSyncSel();
   var ui = "";
   if(stJoints && stTool === "pick") ui += stHandles();
   if(stTool === "pick") ui += stSelUI();
   ui += stLive;
-  $("stCanvas").innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+BODY_VB+'" '
+  $("stCanvas").innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="'+sceneVB(scene)+'" '
     + 'preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(charName || "Your MeMake character")+'">'
-    + studioArt(state, scene, "st", { transparent:stTrans, face:animFace }) + ui + '</svg>';
+    + studioArt(state, scene, "st", { transparent:stTrans }) + ui + '</svg>';
 }
 
 /* ---------- pointer work ---------- */
 function stPoseFrom(j, pt){
-  var R = rigLocal(scene.pose, scene.body), F = figFrame(scene), p = scene.pose;
+  var ch = curChar(), R = rigLocal(ch.pose, ch.body), F = figFrame(ch, scene), p = ch.pose;
   var L = toLocalPt(pt, F);
   switch(j){
-    case "root":   p.x = clamp(pt.x - 200, -170, 170); p.y = clamp(pt.y - 400, -280, 230); break;
+    case "root":   p.x = clamp(pt.x - sceneW(scene)/2, -sceneW(scene), sceneW(scene));
+                   p.y = clamp(pt.y - sceneH(scene)*0.625, -sceneH(scene), sceneH(scene)); break;
     case "chest":  p.lean = norm180(angTo(toWorld(R.hip,F), pt) - 180); break;
     case "head":   p.neck = clamp(norm180(angTo(R.chest, L) - 180), -42, 42); break;
     case "tilt":   p.tilt = clamp(norm180(angTo(R.neck, L) - 180 - p.neck), -48, 48); break;
@@ -2817,6 +3076,10 @@ function stDown(e){
   var h = attrUp(t, "data-h"), sel = stObj(stSel);
   if(h && sel){ stDrag = { type:"handle", h:h, f:stFrames()[sel.attach || "world"], o:sel }; return; }
 
+  var cid = attrUp(t, "data-cid");
+  if(cid && !attrUp(t, "data-oid")){
+    for(var ci=0;ci<scene.cast.length;ci++) if(scene.cast[ci].id === cid && ci !== scene.sel){ stPickChar(ci); return; }
+  }
   var id = attrUp(t, "data-oid");
   if(id){
     var ob = stObj(id);
@@ -2856,7 +3119,7 @@ function stMove(e){
       var rr = -(o.rot||0)*Math.PI/180, dx = p.x-cx, dy = p.y-cy;
       var lx = dx*Math.cos(rr) - dy*Math.sin(rr), ly = dx*Math.sin(rr) + dy*Math.cos(rr);
       var nw = clamp(Math.abs(lx)*2, 8, 900), nh = clamp(Math.abs(ly)*2, 8, 900);
-      if(e.shiftKey || o.kind === "stamp" || o.kind === "text"){
+      if(e.shiftKey || o.kind === "stamp" || o.kind === "text" || o.kind === "img"){
         var k = Math.max(nw/o.w, nh/o.h); nw = o.w*k; nh = o.h*k;
       }
       o.x = cx - nw/2; o.y = cy - nh/2; o.w = nw; o.h = nh;
@@ -2917,6 +3180,55 @@ function stAddText(){
   $("stText").value = "";
 }
 
+/* ---------- importing a picture ----------
+   The file never leaves the page. It is shrunk to something sensible and
+   baked into the scene as a data url, so a saved file still shows it. */
+var IMG_MAX = 460;
+function stImportImage(file){
+  if(!file){ return; }
+  if(!/^image\//.test(file.type)){ Snd.err(); toast("That isn't a picture", true); return; }
+  if(file.size > 24000000){ Snd.err(); toast("That picture is enormous — try a smaller one", true); return; }
+  var count = 0, i;
+  for(i=0;i<scene.objs.length;i++) if(scene.objs[i].kind === "img") count++;
+  if(count >= 8){ Snd.err(); toast("Eight pictures is the limit", true); return; }
+
+  var r = new FileReader();
+  r.onerror = function(){ Snd.err(); toast("Couldn't read that file", true); };
+  r.onload = function(){
+    var img = new Image();
+    img.onerror = function(){ Snd.err(); toast("That picture wouldn't open", true); };
+    img.onload = function(){
+      var iw = img.naturalWidth || img.width || 100, ih = img.naturalHeight || img.height || 100;
+      var k = Math.min(1, IMG_MAX/Math.max(iw, ih));
+      var cw = Math.max(1, Math.round(iw*k)), chh = Math.max(1, Math.round(ih*k));
+      var href = String(r.result);
+      try{
+        var cv = document.createElement("canvas");
+        cv.width = cw; cv.height = chh;
+        cv.getContext("2d").drawImage(img, 0, 0, cw, chh);
+        var shrunk = cv.toDataURL(/png/i.test(file.type) || /gif/i.test(file.type) ? "image/png" : "image/jpeg", 0.85);
+        if(shrunk && shrunk.length < href.length) href = shrunk;
+      }catch(e){}
+      var fit = Math.min(sceneW(scene)*0.55, sceneH(scene)*0.4);
+      var s2 = Math.min(1, fit/Math.max(cw, chh));
+      stAdd({ kind:"img", href:href, w:Math.round(cw*s2), h:Math.round(chh*s2), rot:0,
+              fill:"#ffffff", stroke:LINE, sw:5, ink:false, attach:"world" });
+      Snd.chime();
+      toast("Picture added — drag, resize, or pin it to a hand");
+    };
+    img.src = String(r.result);
+  };
+  r.readAsDataURL(file);
+}
+
+/* ---------- the cast bar under the picture ---------- */
+function stBuildCast(){
+  var box = $("stCast");
+  if(!box) return;
+  box.innerHTML = '<span class="qlab">Cast</span><div class="chips">' + castChips()
+    + '<button type="button" class="chip add" id="stCastAdd" title="Add another character">+</button></div>';
+}
+
 /* ---------- panels ---------- */
 var ST_TABS = [
   { k:"pose",   lab:"Pose" },
@@ -2925,14 +3237,16 @@ var ST_TABS = [
   { k:"add",    lab:"Add" },
   { k:"draw",   lab:"Draw" },
   { k:"anim",   lab:"Animate" },
+  { k:"scene",  lab:"Scene" },
   { k:"layers", lab:"Layers" }
 ];
 var ST_SLIDERS = {
   pose: [
     { k:"lean", lab:"Lean",       min:-95,  max:95,  mul:1 },
     { k:"tilt", lab:"Head tilt",  min:-46,  max:46,  mul:1 },
-    { k:"x",    lab:"Left/right", min:-150, max:150, mul:1 },
-    { k:"y",    lab:"Up/down",    min:-200, max:200, mul:1 }
+    { k:"x",    lab:"Left/right", min:-460, max:460, mul:1 },
+    { k:"y",    lab:"Up/down",    min:-320, max:320, mul:1 },
+    { k:"s",    lab:"Figure size", min:25,  max:200, mul:100 }
   ],
   body: [
     { k:"hs",   lab:"Head size",   min:42, max:100, mul:100 },
@@ -2942,8 +3256,9 @@ var ST_SLIDERS = {
   ]
 };
 function slidersHTML(grp){
+  var ch = curChar();
   return ST_SLIDERS[grp].map(function(s){
-    var v = Math.round((grp === "body" ? scene.body[s.k] : scene.pose[s.k]) * s.mul);
+    var v = Math.round((grp === "body" ? ch.body[s.k] : ch.pose[s.k]) * s.mul);
     return '<div class="st-row"><span class="lab">'+s.lab+'</span>'
       + '<input class="sl" type="range" data-sl="'+s.k+'" data-grp="'+grp+'" data-mul="'+s.mul+'" '
       + 'min="'+s.min+'" max="'+s.max+'" value="'+v+'" aria-label="'+s.lab+'"></div>';
@@ -2992,18 +3307,47 @@ function bgChips(){
   return out;
 }
 function stBuildOutfit(){
+  var ch = curChar();
   stPanelEl("outfit").innerHTML =
     '<div class="st-row"><span class="lab">Outfits</span><div class="pills">'+pillsHTML(OUTFITS,"data-fit")+'</div></div>'
-    + '<div class="st-row"><span class="lab">Top</span><div class="chips">'+chipsHTML(TOPS, scene.outfit.top, "data-top")+'</div></div>'
-    + '<div class="st-row"><span class="lab">Bottom</span><div class="chips">'+chipsHTML(BOTTOMS, scene.outfit.bottom, "data-bot")+'</div></div>'
-    + '<div class="st-row"><span class="lab">Shoes</span><div class="chips">'+chipsHTML(SHOES, scene.outfit.shoes, "data-shoe")+'</div></div>'
-    + colRow("Top colour", "topC", scene.outfit.topC)
-    + colRow("Top trim", "topC2", scene.outfit.topC2)
-    + colRow("Bottoms", "botC", scene.outfit.botC)
-    + colRow("Shoes", "shoeC", scene.outfit.shoeC)
+    + '<div class="st-row"><span class="lab">Top</span><div class="chips">'+chipsHTML(TOPS, ch.outfit.top, "data-top")+'</div></div>'
+    + '<div class="st-row"><span class="lab">Bottom</span><div class="chips">'+chipsHTML(BOTTOMS, ch.outfit.bottom, "data-bot")+'</div></div>'
+    + '<div class="st-row"><span class="lab">Shoes</span><div class="chips">'+chipsHTML(SHOES, ch.outfit.shoes, "data-shoe")+'</div></div>'
+    + colRow("Top colour", "topC", ch.outfit.topC)
+    + colRow("Top trim", "topC2", ch.outfit.topC2)
+    + colRow("Bottoms", "botC", ch.outfit.botC)
+    + colRow("Shoes", "shoeC", ch.outfit.shoeC)
+    + '<p class="hint">Clothes belong to whoever is picked in the cast bar under the picture.</p>';
+}
+function castChips(){
+  return scene.cast.map(function(ch,i){
+    return '<button type="button" class="chip" data-char="'+i+'" aria-selected="'+(i===scene.sel)+'">'+esc(charLabel(ch,i))+'</button>';
+  }).join("");
+}
+function stBuildScene(){
+  var panel = stPanelEl("scene");
+  if(!panel) return;
+  var sizes = CANVAS_SIZES.map(function(z,i){
+    var on = scene.w === z.w && scene.h === z.h;
+    return '<button type="button" class="chip" data-size="'+i+'" aria-selected="'+on+'">'+esc(z.name)+'</button>';
+  }).join("");
+  panel.innerHTML =
+    '<div class="st-row"><span class="lab">Shape</span><div class="chips">'+sizes+'</div></div>'
+    + '<div class="st-row"><span class="lab">Width</span><input class="sl" type="range" id="stW" min="240" max="1200" step="20" value="'+sceneW(scene)+'" aria-label="Canvas width">'
+    + '<span class="count">'+sceneW(scene)+' &times; '+sceneH(scene)+'</span></div>'
+    + '<div class="st-row"><span class="lab">Height</span><input class="sl" type="range" id="stH" min="240" max="1200" step="20" value="'+sceneH(scene)+'" aria-label="Canvas height"></div>'
     + '<div class="st-row"><span class="lab">Backdrop</span><div class="chips">'+bgChips()+'</div></div>'
     + '<div class="st-row"><label class="check"><input type="checkbox" id="stGround"'+(scene.ground!==false?" checked":"")+'> Shadow on the floor</label>'
-    + '<label class="check"><input type="checkbox" id="stTransBg"'+(stTrans?" checked":"")+'> See-through when saved</label></div>';
+    + '<label class="check"><input type="checkbox" id="stTransBg"'+(stTrans?" checked":"")+'> See-through when saved</label></div>'
+    + '<p class="qlab" style="margin:15px 0 8px">Cast</p>'
+    + '<div class="st-row"><div class="chips">'+castChips()+'</div></div>'
+    + '<div class="st-row"><input type="text" id="stCharName" maxlength="22" placeholder="Name this character" value="'+esc(curChar().name||"")+'" aria-label="Name this character"></div>'
+    + '<div class="st-row">'
+    + '<button class="btn btn-sm btn-mint" id="stCharAdd">+ Character</button>'
+    + '<button class="btn btn-sm" id="stCharCopy">Copy this one</button>'
+    + '<button class="btn btn-sm btn-coral" id="stCharDel"'+(scene.cast.length<2?" disabled":"")+'>Remove</button>'
+    + '</div>'
+    + '<p class="hint">Everyone gets their own face, clothes and pose. Tap a character on the picture to start working on them.</p>';
 }
 function stBuildAdd(){
   var k, shapes = "", stamps = "";
@@ -3021,6 +3365,8 @@ function stBuildAdd(){
     '<div class="st-row"><span class="lab">Colour</span>'+swatchHTML("pen", stPen.color)+'</div>'
     + '<div class="st-row"><input type="text" id="stText" maxlength="40" placeholder="Type some words" aria-label="Words to add">'
     + '<button class="btn btn-sm btn-mint" id="stAddText">Add words</button></div>'
+    + '<div class="st-row"><button class="btn btn-sm btn-sun" id="stAddImg">Import a picture</button>'
+    + '<span class="count">png, jpg, gif or webp &middot; it becomes a sticker</span></div>'
     + '<p class="qlab" style="margin:13px 0 7px">Shapes</p><div class="grid-mini">'+shapes+'</div>'
     + '<p class="qlab" style="margin:15px 0 7px">Props</p><div class="grid-mini">'+stamps+'</div>';
 }
@@ -3043,7 +3389,8 @@ function stBuildLayers(){
     o = scene.objs[i];
     nm = o.kind === "text" ? ('"'+o.text+'"')
        : o.kind === "stamp" ? (STAMPS[o.stamp] ? STAMPS[o.stamp].name : "Prop")
-       : o.kind === "path" ? "Drawing" : (SHAPES[o.kind] || "Shape");
+       : o.kind === "path" ? "Drawing"
+       : o.kind === "img" ? "Picture" : (SHAPES[o.kind] || "Shape");
     out += '<div class="lay'+(o.id===stSel?" on":"")+'" data-lay="'+o.id+'">'
       + '<span class="chipdot" style="background:'+(o.fill||"#888")+'"></span>'
       + '<span class="nm">'+esc(nm)+(o.attach && o.attach !== "world" ? " &middot; pinned" : "")+'</span>'
@@ -3061,8 +3408,11 @@ function stBuildProps(){
   if(!box) return;
   if(!o){ box.hidden = true; box.innerHTML = ""; return; }
   box.hidden = false;
-  var opts = JOINT_LIST.map(function(j){
-    return '<option value="'+j.k+'"'+((o.attach||"world") === j.k ? " selected" : "")+'>'+esc(j.lab)+'</option>';
+  var opts = scene.cast.map(function(ch,ci){
+    return '<optgroup label="'+esc(charLabel(ch,ci))+'">' + JOINT_LIST.map(function(j){
+      var v = ch.id + ":" + j.k;
+      return '<option value="'+v+'"'+((o.attach||"world") === v ? " selected" : "")+'>'+esc(j.lab)+'</option>';
+    }).join("") + '</optgroup>';
   }).join("");
   box.innerHTML =
     '<div class="st-row"><span class="lab">Colour</span>'+swatchHTML("sel", o.fill || "#4a6fd1")+'</div>'
@@ -3080,10 +3430,11 @@ function stBuildProps(){
     + (o.kind === "path" || o.kind === "stamp" ? "" : '<label class="check"><input type="checkbox" data-chk="ink"'+(o.ink !== false ? " checked":"")+'> Black outline</label>')
     + '</div>';
 }
-function stBuildAllPanels(){ stBuildPose(); stBuildBody(); stBuildOutfit(); stBuildAdd(); stBuildDraw(); stBuildAnim(); }
+function stBuildAllPanels(){ stBuildPose(); stBuildBody(); stBuildOutfit(); stBuildScene(); stBuildAdd(); stBuildDraw(); stBuildAnim(); stBuildCast(); }
 
 function stRefresh(){
   stDraw();
+  stBuildCast();
   stBuildLayers();
   stBuildProps();
   stUpdateUndo();
@@ -3092,12 +3443,12 @@ function stRefresh(){
 
 /* ---------- presets ---------- */
 function stSetPose(i){
-  scene.pose = poseFrom(POSES[i].p);
+  curChar().pose = poseFrom(POSES[i].p, curChar().pose.s);
   Snd.shuffle(); stPush(); stRefresh(); stBuildPose();
   toast(POSES[i].name);
 }
 function stRandomPose(){
-  var p = scene.pose, r = function(a){ return Math.round((Math.random()*2-1)*a); };
+  var p = curChar().pose, r = function(a){ return Math.round((Math.random()*2-1)*a); };
   p.aUL = r(150); p.aLL = clamp(r(90), -95, 20); p.aUR = r(150); p.aLR = clamp(r(90), -20, 95);
   p.lUL = clamp(r(55), -60, 18); p.lLL = clamp(r(80), -8, 80);
   p.lUR = clamp(r(55), -18, 60); p.lLR = clamp(r(80), -80, 8);
@@ -3106,7 +3457,7 @@ function stRandomPose(){
 }
 function stSetOutfit(i){
   var o = OUTFITS[i].o, k;
-  for(k in o) scene.outfit[k] = o[k];
+  for(k in o) curChar().outfit[k] = o[k];
   Snd.shuffle(); stPush(); stRefresh(); stBuildOutfit();
   toast(OUTFITS[i].name);
 }
@@ -3117,12 +3468,13 @@ function stFileName(ext){
   return "MeMake-" + (base || "studio") + "." + ext;
 }
 function stSVGString(size){
-  var w = Math.round(size * BODY_W / BODY_H);
-  return studioMarkup(state, scene, "save", { transparent:stTrans, face:animFace, alt:(charName || "MeMake character") })
+  stSyncSel();
+  var w = Math.round(size * sceneW(scene) / sceneH(scene));
+  return studioMarkup(state, scene, "save", { transparent:stTrans, alt:(charName || "MeMake character") })
     .replace("<svg ", '<svg width="'+w+'" height="'+size+'" ');
 }
 function stRaster(cb, fail){
-  var size = exportSize, w = Math.round(size * BODY_W / BODY_H);
+  var size = exportSize, w = Math.round(size * sceneW(scene) / sceneH(scene));
   var img = new Image();
   img.onload = function(){
     var cv = document.createElement("canvas");
@@ -3170,7 +3522,7 @@ function stShelfAdd(){
 function packScene(){
   try{
     return btoa(encodeURIComponent(JSON.stringify({
-      pose:scene.pose, body:scene.body, outfit:scene.outfit, bg:scene.bg,
+      w:scene.w, h:scene.h, cast:scene.cast, sel:scene.sel, bg:scene.bg,
       ground:scene.ground, objs:scene.objs, anim:scene.anim
     }))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
   }catch(e){ return null; }
@@ -3222,6 +3574,15 @@ function stInit(){
   $("stLinkBtn").addEventListener("click", stLink);
   $("stHelpBtn").addEventListener("click", function(){ $("helpVeil").hidden = false; });
 
+  $("stCast").addEventListener("click", function(e){
+    var b = e.target.closest("[data-char]");
+    if(b){ stPickChar(+b.dataset.char); return; }
+    if(e.target.closest("#stCastAdd")) stAddChar(false);
+  });
+  $("stImgFile").addEventListener("change", function(){
+    if(this.files && this.files[0]) stImportImage(this.files[0]);
+    this.value = "";
+  });
   $("stTabs").addEventListener("click", function(e){
     var b = e.target.closest("[data-sttab]");
     if(b){ stShowTab(b.dataset.sttab); Snd.tick(); }
@@ -3259,6 +3620,8 @@ function stPanelClick(e){
   if((b = t.closest("[data-bot]")))   return stSetWear("bottom", b.dataset.bot);
   if((b = t.closest("[data-shoe]")))  return stSetWear("shoes", b.dataset.shoe);
   if((b = t.closest("[data-bg]")))    { scene.bg = b.dataset.bg; Snd.blip(3); stPush(); stRefresh(); return stBuildOutfit(); }
+  if((b = t.closest("[data-char]"))) return stPickChar(+b.dataset.char);
+  if((b = t.closest("[data-size]"))) return stSetSize(+b.dataset.size);
   if((b = t.closest("[data-shape]"))) return stAddShape(b.dataset.shape);
   if((b = t.closest("[data-stamp]"))) return stAddStamp(b.dataset.stamp);
   if((b = t.closest("[data-cw]")))    return stPickColor(b.dataset.cw, b.dataset.v);
@@ -3268,12 +3631,16 @@ function stPanelClick(e){
   if((b = t.closest("[data-del]")))   { stSel = b.dataset.del; return stDelSel(); }
   if((b = t.closest("[data-lay]")))   { stSel = b.dataset.lay; Snd.tick(); return stRefresh(); }
   switch(t.id){
-    case "stMirror":    scene.pose = mirrorPose(scene.pose); Snd.whoosh(); stPush(); stRefresh(); stBuildPose(); break;
+    case "stMirror":    curChar().pose = mirrorPose(curChar().pose); Snd.whoosh(); stPush(); stRefresh(); stBuildPose(); break;
     case "stPoseRand":  stRandomPose(); break;
-    case "stPoseReset": scene.pose = clonePose(DEFAULT_POSE); Snd.tick(); stPush(); stRefresh(); stBuildPose(); break;
-    case "stBodyReset": scene.body = { hs:0.66, thick:1, legs:1, tall:1 }; Snd.tick(); stPush(); stRefresh(); stBuildBody(); break;
+    case "stPoseReset": curChar().pose = poseFrom({}, curChar().pose.s); Snd.tick(); stPush(); stRefresh(); stBuildPose(); break;
+    case "stBodyReset": curChar().body = { hs:0.66, thick:1, legs:1, tall:1 }; Snd.tick(); stPush(); stRefresh(); stBuildBody(); break;
     case "stToFace":    showView("maker"); break;
     case "stAddText":   stAddText(); break;
+    case "stAddImg":    $("stImgFile").click(); break;
+    case "stCharAdd":   stAddChar(false); break;
+    case "stCharCopy":  stAddChar(true); break;
+    case "stCharDel":   stDelChar(); break;
     case "stClearDraw":
       scene.objs = scene.objs.filter(function(o){ return o.kind !== "path"; });
       stSel = null; Snd.whoosh(); stPush(); stRefresh(); toast("Drawings rubbed out"); break;
@@ -3282,14 +3649,14 @@ function stPanelClick(e){
   }
 }
 function stSetWear(slot, val){
-  scene.outfit[slot] = val;
+  curChar().outfit[slot] = val;
   Snd.blip(4); stPush(); stRefresh(); stBuildOutfit();
 }
 function stPickColor(key, val){
   if(key === "pen") stPen.color = val;
   else if(key === "skin"){ state.skin = val; pushHistory(); }
   else if(key === "sel"){ var o = stObj(stSel); if(o) o.fill = val; }
-  else scene.outfit[key] = val;
+  else curChar().outfit[key] = val;
   Snd.plink(val);
   stPush(); stRefresh();
   if(key === "pen"){ stBuildAdd(); stBuildDraw(); }
@@ -3301,17 +3668,29 @@ function stPanelInput(e){
   if(animPanelInput(t)) return;
   if(t.dataset && t.dataset.sl){
     var v = +t.value / (+t.dataset.mul || 1);
-    if(t.dataset.grp === "body") scene.body[t.dataset.sl] = v;
-    else scene.pose[t.dataset.sl] = v;
+    if(t.dataset.grp === "body") curChar().body[t.dataset.sl] = v;
+    else curChar().pose[t.dataset.sl] = v;
     stDraw();
     return;
   }
   if(t.id === "stPenW"){ stPen.w = +t.value; return; }
+  if(t.id === "stW" || t.id === "stH"){
+    scene[t.id === "stW" ? "w" : "h"] = +t.value;
+    stDraw();
+    return;
+  }
+  if(t.id === "stCharName"){
+    curChar().name = t.value.slice(0,22);
+    stBuildCast();
+    return;
+  }
   if(t.dataset && t.dataset.cin) return stPickColor(t.dataset.cin, t.value);
 }
 function stPanelChange(e){
   var t = e.target;
   if(animPanelChange(t)) return;
+  if(t.id === "stW" || t.id === "stH"){ Snd.tick(); stPush(); stRefresh(); stBuildScene(); return; }
+  if(t.id === "stCharName"){ stPush(); stBuildCast(); return; }
   if(t.dataset && t.dataset.sl){ Snd.tick(); stPush(); stRefresh(); return; }
   if(t.id === "stJointsOn"){ stJoints = t.checked; stDraw(); return; }
   if(t.id === "stGround"){ scene.ground = t.checked; stPush(); stRefresh(); return; }
@@ -3411,7 +3790,6 @@ var ANIM_EASE_LIST = [
   ["back","Overshoot"], ["bounce","Bouncy"], ["elastic","Springy"], ["hold","Snap"]
 ];
 
-var animFace = { px:0, py:0, blink:0, open:0 };
 var animT = 0, animSel = -1, animPlaying = false, animRaf = 0, animT0 = 0;
 var animOnion = false, animBusy = false, animPreview = false;
 
@@ -3426,16 +3804,20 @@ function animFrameCount(){ return clamp(Math.round(animDur()*animFps()), 2, 120)
 
 /* ---------- reading the timeline ---------- */
 function animCapture(t){
-  var k = {
-    t: t, ease:"inout",
-    pose: clonePose(scene.pose),
-    body: { hs:scene.body.hs, thick:scene.body.thick, legs:scene.body.legs, tall:scene.body.tall },
-    face: { px:animFace.px, py:animFace.py, blink:animFace.blink, open:animFace.open,
-            eyes:state.eyes, mouth:state.mouth, brows:state.brows },
-    objs: {}
-  };
-  for(var i=0;i<scene.objs.length;i++){
-    var o = scene.objs[i];
+  stSyncSel();
+  var k = { t:t, ease:"inout", cast:{}, objs:{} }, i, ch, st, o;
+  for(i=0;i<scene.cast.length;i++){
+    ch = scene.cast[i];
+    st = charState(ch, state);
+    k.cast[ch.id] = {
+      pose: clonePose(ch.pose),
+      body: { hs:ch.body.hs, thick:ch.body.thick, legs:ch.body.legs, tall:ch.body.tall },
+      face: { px:ch.face.px, py:ch.face.py, blink:ch.face.blink, open:ch.face.open,
+              eyes:st.eyes, mouth:st.mouth, brows:st.brows }
+    };
+  }
+  for(i=0;i<scene.objs.length;i++){
+    o = scene.objs[i];
     k.objs[o.id] = { x:o.x, y:o.y, w:o.w, h:o.h, rot:o.rot||0, op:(o.op===undefined?1:o.op) };
   }
   return k;
@@ -3451,15 +3833,19 @@ function animStateAt(t){
     f = (t - k0.t) / (k1.t - k0.t);
     f = (ANIM_EASE[k0.ease] || ANIM_EASE.inout)(clamp(f,0,1));
   }
-  out = { pose:{}, body:{}, face:{}, objs:{} };
-  for(j in k0.pose) out.pose[j] = k1 ? lerp(k0.pose[j], k1.pose[j], f) : k0.pose[j];
-  for(j in k0.body) out.body[j] = k1 ? lerp(k0.body[j], k1.body[j], f) : k0.body[j];
-  out.face.px = k1 ? lerp(k0.face.px, k1.face.px, f) : k0.face.px;
-  out.face.py = k1 ? lerp(k0.face.py, k1.face.py, f) : k0.face.py;
-  out.face.blink = k1 ? lerp(k0.face.blink, k1.face.blink, f) : k0.face.blink;
-  out.face.open = k1 ? lerp(k0.face.open, k1.face.open, f) : k0.face.open;
-  /* expressions swap over on the key, they don't melt into each other */
-  out.face.eyes = k0.face.eyes; out.face.mouth = k0.face.mouth; out.face.brows = k0.face.brows;
+  out = { cast:{}, objs:{} };
+  for(var cid in k0.cast){
+    var a = k0.cast[cid], bb = k1 && k1.cast[cid], c = { pose:{}, body:{}, face:{} };
+    for(j in a.pose) c.pose[j] = bb ? lerp(a.pose[j], bb.pose[j], f) : a.pose[j];
+    for(j in a.body) c.body[j] = bb ? lerp(a.body[j], bb.body[j], f) : a.body[j];
+    c.face.px = bb ? lerp(a.face.px, bb.face.px, f) : a.face.px;
+    c.face.py = bb ? lerp(a.face.py, bb.face.py, f) : a.face.py;
+    c.face.blink = bb ? lerp(a.face.blink, bb.face.blink, f) : a.face.blink;
+    c.face.open = bb ? lerp(a.face.open, bb.face.open, f) : a.face.open;
+    /* expressions swap over on the key, they don't melt into each other */
+    c.face.eyes = a.face.eyes; c.face.mouth = a.face.mouth; c.face.brows = a.face.brows;
+    out.cast[cid] = c;
+  }
   for(j in k0.objs){
     var a = k0.objs[j], b = k1 && k1.objs[j];
     out.objs[j] = b ? { x:lerp(a.x,b.x,f), y:lerp(a.y,b.y,f), w:lerp(a.w,b.w,f),
@@ -3468,7 +3854,13 @@ function animStateAt(t){
   return out;
 }
 function animSceneAt(s){
-  var sc = { pose:s.pose, body:s.body, outfit:scene.outfit, bg:scene.bg, ground:scene.ground, objs:[] }, i, o, n, m;
+  var sc = { w:scene.w, h:scene.h, sel:scene.sel, bg:scene.bg, ground:scene.ground, cast:[], objs:[] }, i, o, n, m, kk;
+  for(i=0;i<scene.cast.length;i++){
+    var ch = scene.cast[i], cm = s.cast[ch.id], cn = {};
+    for(kk in ch) cn[kk] = ch[kk];
+    if(cm){ cn.pose = cm.pose; cn.body = cm.body; cn.face = cm.face; }
+    sc.cast.push(cn);
+  }
   for(i=0;i<scene.objs.length;i++){
     o = scene.objs[i]; m = s.objs[o.id];
     if(!m){ sc.objs.push(o); continue; }
@@ -3478,30 +3870,24 @@ function animSceneAt(s){
   }
   return sc;
 }
-function animFaceState(s){
-  if(!s.face.eyes && !s.face.mouth && !s.face.brows) return state;
-  var st2 = cloneState(state);
-  if(EYES[s.face.eyes]) st2.eyes = s.face.eyes;
-  if(MOUTHS[s.face.mouth]) st2.mouth = s.face.mouth;
-  if(BROWS[s.face.brows]) st2.brows = s.face.brows;
-  return st2;
-}
-
 /* ---------- drawing a frame ---------- */
+function animBgArt(uid){
+  var w = sceneW(scene), h = sceneH(scene), k = Math.max(w,h)/400;
+  return '<g transform="translate('+N1((w-400*k)/2)+','+N1((h-400*k)/2)+') scale('+k.toFixed(3)+')">'
+    + pick(BGS, scene.bg || "fade", "plain").draw(palette(state), uid) + '</g>';
+}
 function animDraw(){
   animPreview = true;
-  var s = animStateAt(animT), sc = animSceneAt(s), st2 = animFaceState(s), pre = "";
-  if(!stTrans){
-    pre += '<g transform="translate(-120,0) scale(1.6)">'
-        +  pick(BGS, scene.bg || "fade", "plain").draw(palette(state), "anb") + '</g>';
-  }
+  stSyncSel();
+  var s = animStateAt(animT), sc = animSceneAt(s), pre = "";
+  if(!stTrans) pre += animBgArt("anb");
   if(animOnion && animSel > 0){
-    var g = scene.anim.keys[animSel-1], gs = { pose:g.pose, body:g.body, face:g.face, objs:g.objs };
-    pre += '<g opacity="0.22">' + studioArt(animFaceState(gs), animSceneAt(gs), "gh", { transparent:true, face:g.face }) + '</g>';
+    var g = scene.anim.keys[animSel-1];
+    pre += '<g opacity="0.22">' + studioArt(state, animSceneAt({ cast:g.cast, objs:g.objs }), "gh", { transparent:true }) + '</g>';
   }
-  $("stCanvas").innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+BODY_VB+'" '
+  $("stCanvas").innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="'+sceneVB(scene)+'" '
     + 'preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(charName || "Your MeMake character")+'">'
-    + pre + studioArt(st2, sc, "an", { transparent:true, face:s.face }) + '</svg>';
+    + pre + studioArt(state, sc, "an", { transparent:true }) + '</svg>';
 }
 function animStop(){
   animPlaying = false;
@@ -3566,18 +3952,28 @@ function animGoKey(i){
   if(!k) return;
   animStop();
   animSel = i; animT = k.t;
-  var j;
-  for(j in k.pose) scene.pose[j] = k.pose[j];
-  for(j in k.body) scene.body[j] = k.body[j];
-  animFace.px = k.face.px; animFace.py = k.face.py; animFace.blink = k.face.blink; animFace.open = k.face.open;
-  if(EYES[k.face.eyes]) state.eyes = k.face.eyes;
-  if(MOUTHS[k.face.mouth]) state.mouth = k.face.mouth;
-  if(BROWS[k.face.brows]) state.brows = k.face.brows;
+  var j, m, ch, c, st;
+  for(j=0;j<scene.cast.length;j++){
+    ch = scene.cast[j]; c = k.cast[ch.id];
+    if(!c) continue;
+    for(m in c.pose) ch.pose[m] = c.pose[m];
+    for(m in c.body) ch.body[m] = c.body[m];
+    ch.face = { px:c.face.px, py:c.face.py, blink:c.face.blink, open:c.face.open };
+    /* the expression the key pinned becomes that character's own face again */
+    if(j === scene.sel){
+      if(EYES[c.face.eyes]) state.eyes = c.face.eyes;
+      if(MOUTHS[c.face.mouth]) state.mouth = c.face.mouth;
+      if(BROWS[c.face.brows]) state.brows = c.face.brows;
+    } else if(ch.code){
+      st = decodeState(ch.code);
+      if(st){ delete st.fuzzy; ch.code = encodeState(faceSwap(st, c.face)); }
+    }
+  }
   for(j=0;j<scene.objs.length;j++){
-    var m = k.objs[scene.objs[j].id];
+    m = k.objs[scene.objs[j].id];
     if(m){ var o = scene.objs[j]; o.x=m.x; o.y=m.y; o.w=m.w; o.h=m.h; o.rot=m.rot; o.op=m.op; }
   }
-  Snd.tick(); stRefresh(); stBuildAnim(); stBuildPose();
+  Snd.tick(); stRefresh(); stBuildAnim(); stBuildPose(); stBuildBody();
 }
 /* selecting a key means you edit it in place — every change writes back */
 function animAutoKey(){
@@ -3699,7 +4095,7 @@ var ANIM_PRESETS = [
     { t:1,   p:{}, b:{}, f:{} } ] }
 ];
 function animUsePreset(i){
-  var P = ANIM_PRESETS[i], sel = stObj(stSel), j, key, keys = [], base;
+  var P = ANIM_PRESETS[i], sel = stObj(stSel), j, key, keys = [], base, cid = curChar().id;
   if(P.needsObj && !sel){ Snd.err(); toast("Pick a sticker on the picture first", true); return; }
   animStop();
   animBusy = true;
@@ -3709,9 +4105,9 @@ function animUsePreset(i){
     key = JSON.parse(JSON.stringify(base));
     key.t = src.t;
     key.ease = src.e || "inout";
-    if(src.p) for(var pk in src.p) key.pose[pk] = src.p[pk];
-    if(src.b) for(var bk in src.b) key.body[bk] = src.b[bk];
-    if(src.f) for(var fk in src.f) key.face[fk] = src.f[fk];
+    if(src.p) for(var pk in src.p) if(pk !== "s") key.cast[cid].pose[pk] = src.p[pk];
+    if(src.b) for(var bk in src.b) key.cast[cid].body[bk] = src.b[bk];
+    if(src.f) for(var fk in src.f) key.cast[cid].face[fk] = src.f[fk];
     if(src.o && sel && key.objs[sel.id]){
       for(var ok in src.o){
         key.objs[sel.id][ok] = ok === "rot" ? (base.objs[sel.id].rot + src.o[ok]) : src.o[ok];
@@ -3729,12 +4125,13 @@ function animUsePreset(i){
 /* ---------- saving a moving picture ---------- */
 function animFrameSVG(i, n, w, h, trans){
   var t = (i/n) * animDur(), s = animStateAt(t);
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="'+BODY_VB+'">'
-    + studioArt(animFaceState(s), animSceneAt(s), "f"+i, { transparent:trans, face:s.face }) + '</svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+    + 'width="'+w+'" height="'+h+'" viewBox="'+sceneVB(scene)+'">'
+    + studioArt(state, animSceneAt(s), "f"+i, { transparent:trans }) + '</svg>';
 }
 function animFrameInner(i, n){
   var t = (i/n) * animDur(), s = animStateAt(t);
-  return studioArt(animFaceState(s), animSceneAt(s), "f"+i, { transparent:true, face:s.face });
+  return studioArt(state, animSceneAt(s), "f"+i, { transparent:true });
 }
 function animCheck(){
   if(!animOn() || scene.anim.keys.length < 2){ Snd.err(); toast("Make an animation first", true); return false; }
@@ -3745,16 +4142,14 @@ function animCheck(){
 function animSaveSVG(){
   if(!animCheck()) return;
   var n = animFrameCount(), T = animDur(), i, body = "", pre = "";
-  if(!stTrans){
-    pre = '<g transform="translate(-120,0) scale(1.6)">'
-        + pick(BGS, scene.bg || "fade", "plain").draw(palette(state), "sb") + '</g>';
-  }
+  if(!stTrans) pre = animBgArt("sb");
   for(i=0;i<n;i++){
     body += '<g class="f" style="animation-delay:'+(-(i*T/n)).toFixed(3)+'s">' + animFrameInner(i,n) + '</g>';
   }
   var css = '.f{opacity:0;animation:mmf '+T.toFixed(3)+'s steps(1,end) infinite}'
           + '@keyframes mmf{0%{opacity:1}'+(100/n).toFixed(4)+'%{opacity:0}100%{opacity:0}}';
-  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="640" viewBox="'+BODY_VB+'">'
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
+          + 'width="'+sceneW(scene)+'" height="'+sceneH(scene)+'" viewBox="'+sceneVB(scene)+'">'
           + '<style>'+css+'</style>' + pre + body + '</svg>';
   saveBlob(new Blob([svg], {type:"image/svg+xml"}), stFileName("anim.svg"));
   Snd.chime();
@@ -3775,7 +4170,7 @@ function animLoadFrames(w, h, cb){
 }
 function animSaveSheet(){
   if(!animCheck()) return;
-  var fw = 200, fh = 320, cols = 6;
+  var ar = sceneW(scene)/sceneH(scene), fh = 320, fw = Math.round(fh*ar), cols = 6;
   toast("Drawing the frames\u2026");
   animLoadFrames(fw, fh, function(imgs, n){
     var rows = Math.ceil(n/cols);
@@ -3796,7 +4191,7 @@ function animCanRecord(){
 function animSaveVideo(){
   if(!animCheck()) return;
   if(!animCanRecord()){ Snd.err(); toast("This browser can't record video — try the animated SVG", true); return; }
-  var w = 400, h = 640, fps = animFps();
+  var w = sceneW(scene), h = sceneH(scene), fps = animFps();
   toast("Recording\u2026");
   animLoadFrames(w, h, function(imgs, n){
     var cv = document.createElement("canvas");
@@ -3840,7 +4235,7 @@ function animTimelineHTML(){
 function stBuildAnim(){
   var panel = stPanelEl("anim");
   if(!panel) return;
-  var has = animOn(), k = has && animSel >= 0 ? scene.anim.keys[animSel] : null;
+  var has = animOn(), k = has && animSel >= 0 ? scene.anim.keys[animSel] : null, fc = curChar().face;
   var easeOpts = ANIM_EASE_LIST.map(function(e){
     return '<option value="'+e[0]+'"'+(k && k.ease===e[0]?" selected":"")+'>'+e[1]+'</option>';
   }).join("");
@@ -3882,10 +4277,10 @@ function stBuildAnim(){
           : 'Pick a ready-made move above, or pose your character and hit <strong>+ Keyframe</strong>, move things, then add another.')+'</p>')
 
     + '<p class="qlab" style="margin:14px 0 8px">Face</p>'
-    + '<div class="st-row"><span class="lab">Look left/right</span><input class="sl" type="range" id="animPx" min="-9" max="9" value="'+animFace.px+'" aria-label="Pupils left or right"></div>'
-    + '<div class="st-row"><span class="lab">Look up/down</span><input class="sl" type="range" id="animPy" min="-7" max="7" value="'+animFace.py+'" aria-label="Pupils up or down"></div>'
-    + '<div class="st-row"><span class="lab">Eyes shut</span><input class="sl" type="range" id="animBlink" min="0" max="100" value="'+Math.round(animFace.blink*100)+'" aria-label="How shut the eyes are"></div>'
-    + '<div class="st-row"><span class="lab">Mouth open</span><input class="sl" type="range" id="animOpen" min="0" max="100" value="'+Math.round(animFace.open*100)+'" aria-label="How open the mouth is"></div>'
+    + '<div class="st-row"><span class="lab">Look left/right</span><input class="sl" type="range" id="animPx" min="-9" max="9" value="'+fc.px+'" aria-label="Pupils left or right"></div>'
+    + '<div class="st-row"><span class="lab">Look up/down</span><input class="sl" type="range" id="animPy" min="-7" max="7" value="'+fc.py+'" aria-label="Pupils up or down"></div>'
+    + '<div class="st-row"><span class="lab">Eyes shut</span><input class="sl" type="range" id="animBlink" min="0" max="100" value="'+Math.round(fc.blink*100)+'" aria-label="How shut the eyes are"></div>'
+    + '<div class="st-row"><span class="lab">Mouth open</span><input class="sl" type="range" id="animOpen" min="0" max="100" value="'+Math.round(fc.open*100)+'" aria-label="How open the mouth is"></div>'
     + '<div class="st-row"><button class="btn btn-sm" id="animFaceReset">Rest the face</button>'
     + '<button class="btn btn-sm" id="animClear"'+(has?"":" disabled")+'>Clear animation</button></div>'
 
@@ -3912,7 +4307,7 @@ function animPanelClick(t, e){
     case "animDel":    animDelKey(); return true;
     case "animClear":  animClear(); return true;
     case "animFaceReset":
-      animFace = { px:0, py:0, blink:0, open:0 };
+      curChar().face = { px:0, py:0, blink:0, open:0 };
       animAutoKey(); stPush(); stRefresh(); stBuildAnim(); return true;
     case "animSvg":    animSaveSVG(); return true;
     case "animVid":    animSaveVideo(); return true;
@@ -3929,10 +4324,10 @@ function animPanelClick(t, e){
 function animPanelInput(t){
   var v = +t.value;
   switch(t.id){
-    case "animPx":    animFace.px = v; break;
-    case "animPy":    animFace.py = v; break;
-    case "animBlink": animFace.blink = v/100; break;
-    case "animOpen":  animFace.open = v/100; break;
+    case "animPx":    curChar().face.px = v; break;
+    case "animPy":    curChar().face.py = v; break;
+    case "animBlink": curChar().face.blink = v/100; break;
+    case "animOpen":  curChar().face.open = v/100; break;
     case "animKeyT":  animSetTime(v/100); return true;
     default: return false;
   }
@@ -4857,7 +5252,8 @@ var API = {
   rigLocal:rigLocal, jointFrames:jointFrames,
   figFrame:figFrame, scene:function(){ return scene; },
   ANIM_PRESETS:ANIM_PRESETS, ANIM_EASE:ANIM_EASE, animStateAt:animStateAt,
-  animCapture:animCapture, animFace:function(){ return animFace; },
+  animCapture:animCapture, defaultChar:defaultChar, CANVAS_SIZES:CANVAS_SIZES,
+  curChar:function(){ return curChar(); }, sceneFrames:sceneFrames,
   animFrameSVG:animFrameSVG, animFrameCount:animFrameCount
 };
 if(typeof window !== "undefined") window.MeMake = API;
