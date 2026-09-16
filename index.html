@@ -268,6 +268,18 @@
   .mini:active{transform:translateY(3px);box-shadow:0 0 0 var(--ink)}
   .mini svg{display:block;width:100%;height:auto}
   .mini .cap{display:block;font-size:11px;font-weight:500;padding:2px 0 3px;line-height:1.1}
+  .tl{
+    position:relative;height:34px;margin:2px 0 13px;border:3px solid var(--ink);border-radius:999px;
+    background:var(--field);cursor:pointer;
+  }
+  .tl::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:3px;margin-top:-1.5px;background:var(--soft);border-radius:2px}
+  .tlk{
+    position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;padding:0;border-radius:50%;
+    border:3px solid var(--ink);background:var(--sun);z-index:2;
+  }
+  .tlk.on{background:var(--mint);transform:scale(1.25)}
+  .tlhead{position:absolute;top:-3px;bottom:-3px;width:3px;margin-left:-1.5px;background:var(--coral);border-radius:2px;z-index:3;pointer-events:none}
+  .tlempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;opacity:.55}
   .lay{
     display:flex;align-items:center;gap:7px;border:3px solid var(--ink);border-radius:13px;
     padding:5px 7px;background:var(--tile);margin-bottom:7px;
@@ -453,6 +465,7 @@
         <div class="st-panel" data-tab="outfit" hidden></div>
         <div class="st-panel" data-tab="add" hidden></div>
         <div class="st-panel" data-tab="draw" hidden></div>
+        <div class="st-panel" data-tab="anim" hidden></div>
         <div class="st-panel" data-tab="layers" hidden></div>
       </div>
     </section>
@@ -492,6 +505,7 @@
       <div><span>Nudge the chosen sticker</span><span><kbd>&larr;</kbd> <kbd>&rarr;</kbd> <kbd>&uarr;</kbd> <kbd>&darr;</kbd></span></div>
       <div><span>Delete the chosen sticker</span><span><kbd>Del</kbd></span></div>
       <div><span>Keep it square while resizing</span><span><kbd>Shift</kbd>+drag</span></div>
+      <div><span>Play or pause the animation</span><span><kbd>Space</kbd></span></div>
     </div>
     <div class="save-row"><button class="btn btn-mint" id="helpClose">Got it</button></div>
   </div>
@@ -743,14 +757,19 @@ var BGS = {
 /* ---------------------------------------------------------------
    EYES
    --------------------------------------------------------------- */
+/* set while an animation frame is drawn, so pupils can look around */
+var EYE_LOOK = null;
+function pupG(inner){
+  if(!EYE_LOOK) return inner;
+  return '<g class="mm-pup" transform="translate('+EYE_LOOK.x.toFixed(1)+','+EYE_LOOK.y.toFixed(1)+')">'+inner+'</g>';
+}
 function eyeBall(rx,ry,pr,dx,dy,c){
-  var s = '<ellipse cx="163" cy="174" rx="'+rx+'" ry="'+ry+'" fill="#fff" stroke="'+LINE+'" stroke-width="4.5"/>'
-        + '<circle cx="'+(163+(dx||0))+'" cy="'+(176+(dy||0))+'" r="'+pr+'" fill="'+c.eye+'"/>'
-        + '<circle cx="'+(159+(dx||0))+'" cy="'+(171+(dy||0))+'" r="'+(pr*0.34)+'" fill="#fff"/>';
-  return s;
+  return '<ellipse cx="163" cy="174" rx="'+rx+'" ry="'+ry+'" fill="#fff" stroke="'+LINE+'" stroke-width="4.5"/>'
+    + pupG('<circle cx="'+(163+(dx||0))+'" cy="'+(176+(dy||0))+'" r="'+pr+'" fill="'+c.eye+'"/>'
+         + '<circle cx="'+(159+(dx||0))+'" cy="'+(171+(dy||0))+'" r="'+(pr*0.34)+'" fill="#fff"/>');
 }
 var EYES = {
-  dot:    { name:"Dots",    draw:function(c){ return both('<circle cx="163" cy="176" r="11" fill="'+c.eye+'"/>'); } },
+  dot:    { name:"Dots",    draw:function(c){ return both(pupG('<circle cx="163" cy="176" r="11" fill="'+c.eye+'"/>')); } },
   round:  { name:"Round",   draw:function(c){ return both(eyeBall(15,17,8,0,0,c)); } },
   wide:   { name:"Wide",    draw:function(c){ return both(eyeBall(18,21,7,0,1,c)); } },
   small:  { name:"Beady",   draw:function(c){ return both(eyeBall(11,12,5.5,0,0,c)); } },
@@ -771,14 +790,14 @@ var EYES = {
   }},
   squint: { name:"Squint",  draw:function(c){
     return both('<path d="M147 176 q16 -9 32 0 q-16 9 -32 0 z" fill="#fff" stroke="'+LINE+'" stroke-width="4"/>'
-      + '<circle cx="163" cy="176" r="5.5" fill="'+c.eye+'"/>');
+      + pupG('<circle cx="163" cy="176" r="5.5" fill="'+c.eye+'"/>'));
   }},
   angry:  { name:"Fierce",  draw:function(c){
     return both(eyeBall(15,17,8,0,2,c) + '<path d="M146 158 L181 172 v-16 h-35 z" fill="'+c.skin+'"/><path d="M146 158 L181 172" fill="none" stroke="'+LINE+'" stroke-width="5.5" stroke-linecap="round"/>');
   }},
   shock:  { name:"Shocked", draw:function(c){
     return both('<ellipse cx="163" cy="174" rx="17" ry="19" fill="#fff" stroke="'+LINE+'" stroke-width="4.5"/>'
-      + '<circle cx="163" cy="176" r="4" fill="'+c.eye+'"/>');
+      + pupG('<circle cx="163" cy="176" r="4" fill="'+c.eye+'"/>'));
   }},
   anime:  { name:"Shiny",   draw:function(c){
     return both('<ellipse cx="163" cy="173" rx="19" ry="23" fill="#fff" stroke="'+LINE+'" stroke-width="4.5"/>'
@@ -812,8 +831,8 @@ var EYES = {
   }},
   cyclops:{ name:"Cyclops", draw:function(c){
     return '<ellipse cx="200" cy="174" rx="38" ry="40" fill="#fff" stroke="'+LINE+'" stroke-width="5"/>'
-      + '<circle cx="200" cy="177" r="18" fill="'+c.eye+'"/>'
-      + '<circle cx="192" cy="168" r="7" fill="#fff"/>';
+      + pupG('<circle cx="200" cy="177" r="18" fill="'+c.eye+'"/>'
+           + '<circle cx="192" cy="168" r="7" fill="#fff"/>');
   }},
   cry:    { name:"Teary",   draw:function(c){
     return both(eyeBall(15,17,8,0,2,c) + '<path d="M163 192 q-7 12 0 17 q7 -5 0 -17 z" fill="#6fc8ff" stroke="'+LINE+'" stroke-width="2.5"/>');
@@ -1895,9 +1914,31 @@ function buildSVG(st, uid, opts){
   body += drawFace(c);
   if(beard.back) body += beard.back(c);
   body += pick(BROWS, st.brows, "none").draw(c);
-  body += '<g class="mm-eyes">' + pick(EYES, st.eyes, "round").draw(c) + '</g>';
+
+  /* opts.face carries the animated bits: where the pupils point, how shut the
+     eyes are, how far the mouth is open. Everything is a plain transform, so
+     it works with every eye and mouth in the set. */
+  var fa = opts.face;
+  EYE_LOOK = (fa && (fa.px || fa.py)) ? { x:fa.px, y:fa.py } : null;
+  var eyeArt = pick(EYES, st.eyes, "round").draw(c);
+  EYE_LOOK = null;
+  if(fa && fa.blink > 0){
+    var bl = clamp(fa.blink, 0, 1);
+    eyeArt = '<g transform="translate(200,174) scale(1,'+(1 - 0.9*bl).toFixed(3)+') translate(-200,-174)">' + eyeArt + '</g>';
+    /* past halfway a closed lid fades in, so a held blink reads as shut eyes
+       rather than as eyes that vanished */
+    if(bl > 0.55){
+      eyeArt += both('<path d="M147 176 q16 8 32 0" fill="none" stroke="'+LINE+'" stroke-width="6" stroke-linecap="round" opacity="'+((bl-0.55)/0.45).toFixed(2)+'"/>');
+    }
+  }
+  body += '<g class="mm-eyes">' + eyeArt + '</g>';
   body += pick(NOSES, st.nose, "none").draw(c);
-  body += pick(MOUTHS, st.mouth, "smile").draw(c, uid + "m");
+  var mouthArt = pick(MOUTHS, st.mouth, "smile").draw(c, uid + "m");
+  if(fa && fa.open > 0){
+    var mo = clamp(fa.open, 0, 1);
+    mouthArt = '<g transform="translate(200,213) scale('+(1 - 0.14*mo).toFixed(3)+','+(1 + 1.25*mo).toFixed(3)+') translate(-200,-213)">' + mouthArt + '</g>';
+  }
+  body += mouthArt;
   if(beard.front) body += beard.front(c);
   body += pick(GLASSES, st.glasses, "none").draw(c);
   if(hair.front) body += fitHair(hair.front(c));
@@ -2209,7 +2250,8 @@ function footArt(ang, toward, col, sh, skin){
 }
 
 /* the whole puppet, in hip space */
-function figureArt(st, sc, R, uid){
+function figureArt(st, sc, R, uid, opts){
+  opts = opts || {};
   var c = palette(st), o = sc.outfit, top = TOPS[o.top] || TOPS.tee, bot = BOTTOMS[o.bottom] || BOTTOMS.pants;
   var skin = c.skin, aw = RIG.armW*R.thick, lw = RIG.legW*R.thick, hr = RIG.hand*R.thick;
   var topC = o.topC, topC2 = o.topC2, botC = o.botC, shoeC = o.shoeC;
@@ -2310,7 +2352,7 @@ function figureArt(st, sc, R, uid){
 
   /* the head is the portrait art, shrunk and hung on the neck */
   out += '<g transform="translate('+N1(R.neck.x)+','+N1(R.neck.y)+') rotate('+N1(R.headA)+') scale('+R.hs+') translate(-200,-252)">'
-      +  buildSVG(st, uid+"h", { headOnly:true })
+      +  buildSVG(st, uid+"h", { headOnly:true, face:opts.face })
       +  '</g>';
 
   out += arm(R.shR, R.elR, R.wrR, R.aR, R.aR2);
@@ -2453,7 +2495,7 @@ function studioArt(st, sc, uid, opts){
     var low = Math.max(toWorld(R.anL,F).y, toWorld(R.anR,F).y) + 16;
     out += '<ellipse cx="'+N1(toWorld(R.hip,F).x)+'" cy="'+N1(low)+'" rx="76" ry="15" fill="'+LINE+'" opacity="0.13"/>';
   }
-  out += atFrame(F.ox, F.oy, F.a, figureArt(st, sc, R, uid));
+  out += atFrame(F.ox, F.oy, F.a, figureArt(st, sc, R, uid, opts));
 
   for(i=0;i<sc.objs.length;i++){ o = sc.objs[i]; if(!o.back) out += objMarkup(o, frames); }
   return out;
@@ -2474,6 +2516,7 @@ function defaultScene(){
     bg: "fade",
     ground: true,
     objs: [],
+    anim: null,
     seq: 1
   };
 }
@@ -2521,6 +2564,44 @@ function cleanObj(raw, id){
   }
   return o;
 }
+var FACE_KEYS = { px:[-9,9], py:[-7,7], blink:[0,1], open:[0,1] };
+function cleanFace(raw){
+  var f = { px:0, py:0, blink:0, open:0 }, k;
+  if(raw && typeof raw === "object"){
+    for(k in FACE_KEYS) f[k] = safeNum(raw[k], 0, FACE_KEYS[k][0], FACE_KEYS[k][1]);
+    if(EYES[raw.eyes]) f.eyes = raw.eyes;
+    if(MOUTHS[raw.mouth]) f.mouth = raw.mouth;
+    if(BROWS[raw.brows]) f.brows = raw.brows;
+  }
+  return f;
+}
+function cleanAnim(raw, objs){
+  if(!raw || !Array.isArray(raw.keys) || !raw.keys.length) return null;
+  var a = { fps: safeNum(raw.fps, 12, 2, 30), loop: raw.loop !== false, keys: [] }, i, j, k, o, src, dst;
+  for(i=0;i<raw.keys.length && a.keys.length < 60;i++){
+    src = raw.keys[i];
+    if(!src || typeof src !== "object") continue;
+    k = { t: safeNum(src.t, 0, 0, 60), ease: ANIM_EASE[src.ease] ? src.ease : "inout",
+          pose: clonePose(DEFAULT_POSE), body: { hs:0.66, thick:1, legs:1, tall:1 },
+          face: cleanFace(src.face), objs: {} };
+    if(src.pose) for(j in k.pose) if(typeof src.pose[j] === "number") k.pose[j] = safeNum(src.pose[j], k.pose[j], -720, 720);
+    if(src.body) for(j in k.body) if(typeof src.body[j] === "number") k.body[j] = safeNum(src.body[j], k.body[j], 0.2, 2.4);
+    if(src.objs) for(j=0;j<objs.length;j++){
+      o = src.objs[objs[j].id];
+      if(!o) continue;
+      dst = objs[j];
+      k.objs[dst.id] = {
+        x: safeNum(o.x, dst.x, -4000, 4000), y: safeNum(o.y, dst.y, -4000, 4000),
+        w: safeNum(o.w, dst.w, 2, 3000),     h: safeNum(o.h, dst.h, 2, 3000),
+        rot: safeNum(o.rot, dst.rot, -3600, 3600), op: safeNum(o.op, 1, 0.02, 1)
+      };
+    }
+    a.keys.push(k);
+  }
+  if(!a.keys.length) return null;
+  a.keys.sort(function(x,y){ return x.t - y.t; });
+  return a;
+}
 function cleanScene(raw){
   var d = defaultScene(), k, i, o;
   if(!raw || typeof raw !== "object") return d;
@@ -2537,12 +2618,13 @@ function cleanScene(raw){
   }
   if(typeof raw.bg === "string" && BGS[raw.bg]) d.bg = raw.bg;
   d.ground = raw.ground !== false;
-  if(raw.objs instanceof Array){
+  if(Array.isArray(raw.objs)){
     for(i=0;i<raw.objs.length && d.objs.length < 160;i++){
       o = cleanObj(raw.objs[i], "o" + (d.seq++));
       if(o) d.objs.push(o);
     }
   }
+  d.anim = cleanAnim(raw.anim, d.objs);
   return d;
 }
 
@@ -2570,6 +2652,7 @@ function stApply(raw){
   if(st){ delete st.fuzzy; state = st; }
 }
 function stPush(){
+  animAutoKey();
   var s = stSnap();
   if(stHi >= 0 && stHist[stHi] === s) return;
   stHist = stHist.slice(0, stHi+1);
@@ -2592,7 +2675,7 @@ function stObj(id){ for(var i=0;i<scene.objs.length;i++) if(scene.objs[i].id ===
 function stIndex(id){ for(var i=0;i<scene.objs.length;i++) if(scene.objs[i].id === id) return i; return -1; }
 function stAdd(o){
   o.id = "o" + (scene.seq++);
-  if(o.x === undefined){ o.x = 200 - o.w/2; o.y = 250 - o.h/2; }
+  if(o.x === undefined){ o.x = 300 - o.w/2; o.y = 186 - o.h/2; }
   scene.objs.push(o);
   stSel = o.id;
   Snd.blip(3);
@@ -2682,13 +2765,14 @@ function stSelUI(){
   return '<g transform="translate('+N1(f.x)+','+N1(f.y)+') rotate('+N1(f.a)+')">' + inner + '</g>';
 }
 function stDraw(){
+  animPreview = false;
   var ui = "";
   if(stJoints && stTool === "pick") ui += stHandles();
   if(stTool === "pick") ui += stSelUI();
   ui += stLive;
   $("stCanvas").innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+BODY_VB+'" '
     + 'preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(charName || "Your MeMake character")+'">'
-    + studioArt(state, scene, "st", { transparent:stTrans }) + ui + '</svg>';
+    + studioArt(state, scene, "st", { transparent:stTrans, face:animFace }) + ui + '</svg>';
 }
 
 /* ---------- pointer work ---------- */
@@ -2712,6 +2796,12 @@ function stPoseFrom(j, pt){
 }
 function stDown(e){
   var pt = stPt(e), t = e.target, cv = $("stCanvas");
+  /* the canvas is showing a frame of the animation, not the live scene */
+  if(animPlaying || animPreview){
+    animStop(); stRefresh(); stBuildAnim();
+    toast("Back to editing — the animation is still there");
+    return;
+  }
   if(cv.setPointerCapture) { try{ cv.setPointerCapture(e.pointerId); }catch(err){} }
 
   if(stTool === "pen"){ stDrag = { type:"pen" }; stPts = [pt]; stLive = ""; return; }
@@ -2834,6 +2924,7 @@ var ST_TABS = [
   { k:"outfit", lab:"Outfit" },
   { k:"add",    lab:"Add" },
   { k:"draw",   lab:"Draw" },
+  { k:"anim",   lab:"Animate" },
   { k:"layers", lab:"Layers" }
 ];
 var ST_SLIDERS = {
@@ -2989,7 +3080,7 @@ function stBuildProps(){
     + (o.kind === "path" || o.kind === "stamp" ? "" : '<label class="check"><input type="checkbox" data-chk="ink"'+(o.ink !== false ? " checked":"")+'> Black outline</label>')
     + '</div>';
 }
-function stBuildAllPanels(){ stBuildPose(); stBuildBody(); stBuildOutfit(); stBuildAdd(); stBuildDraw(); }
+function stBuildAllPanels(){ stBuildPose(); stBuildBody(); stBuildOutfit(); stBuildAdd(); stBuildDraw(); stBuildAnim(); }
 
 function stRefresh(){
   stDraw();
@@ -3027,7 +3118,7 @@ function stFileName(ext){
 }
 function stSVGString(size){
   var w = Math.round(size * BODY_W / BODY_H);
-  return studioMarkup(state, scene, "save", { transparent:stTrans, alt:(charName || "MeMake character") })
+  return studioMarkup(state, scene, "save", { transparent:stTrans, face:animFace, alt:(charName || "MeMake character") })
     .replace("<svg ", '<svg width="'+w+'" height="'+size+'" ');
 }
 function stRaster(cb, fail){
@@ -3079,7 +3170,8 @@ function stShelfAdd(){
 function packScene(){
   try{
     return btoa(encodeURIComponent(JSON.stringify({
-      pose:scene.pose, body:scene.body, outfit:scene.outfit, bg:scene.bg, ground:scene.ground, objs:scene.objs
+      pose:scene.pose, body:scene.body, outfit:scene.outfit, bg:scene.bg,
+      ground:scene.ground, objs:scene.objs, anim:scene.anim
     }))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
   }catch(e){ return null; }
 }
@@ -3143,6 +3235,7 @@ function stInit(){
 }
 function stShowTab(k){
   stTab = k;
+  if(k !== "anim") animStop();
   Array.prototype.forEach.call(document.querySelectorAll(".st-panel"), function(p){
     p.hidden = p.dataset.tab !== k;
   });
@@ -3159,6 +3252,7 @@ function stSetTool(t){
 }
 function stPanelClick(e){
   var t = e.target, b;
+  if(animPanelClick(t, e)) return;
   if((b = t.closest("[data-pose]")))  return stSetPose(+b.dataset.pose);
   if((b = t.closest("[data-fit]")))   return stSetOutfit(+b.dataset.fit);
   if((b = t.closest("[data-top]")))   return stSetWear("top", b.dataset.top);
@@ -3204,6 +3298,7 @@ function stPickColor(key, val){
 }
 function stPanelInput(e){
   var t = e.target;
+  if(animPanelInput(t)) return;
   if(t.dataset && t.dataset.sl){
     var v = +t.value / (+t.dataset.mul || 1);
     if(t.dataset.grp === "body") scene.body[t.dataset.sl] = v;
@@ -3216,6 +3311,7 @@ function stPanelInput(e){
 }
 function stPanelChange(e){
   var t = e.target;
+  if(animPanelChange(t)) return;
   if(t.dataset && t.dataset.sl){ Snd.tick(); stPush(); stRefresh(); return; }
   if(t.id === "stJointsOn"){ stJoints = t.checked; stDraw(); return; }
   if(t.id === "stGround"){ scene.ground = t.checked; stPush(); stRefresh(); return; }
@@ -3272,6 +3368,7 @@ function stKey(e){
     stDraw(); stPush();
     return;
   }
+  if(e.key === " " || e.key === "Spacebar"){ e.preventDefault(); animPlay(); return; }
   switch(e.key){
     case "p": case "P": stSetTool("pen"); break;
     case "v": case "V": stSetTool("pick"); break;
@@ -3284,6 +3381,576 @@ function stKey(e){
     case "n": case "N": $("themeBtn").click(); break;
     case "?": $("helpVeil").hidden = false; break;
   }
+}
+
+/* =====================================================================
+   ANIMATION — keyframes with easing. A key is a full snapshot of the
+   pose, the build, the face channels and every sticker's transform, so
+   playback is just a blend between the two keys either side of the
+   playhead. It all lives inside scene.anim, so it saves and shares with
+   everything else.
+   ===================================================================== */
+var ANIM_EASE = {
+  linear:  function(t){ return t; },
+  in:      function(t){ return t*t; },
+  out:     function(t){ return 1-(1-t)*(1-t); },
+  inout:   function(t){ return t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; },
+  back:    function(t){ var c=1.7; return 1 + (c+1)*Math.pow(t-1,3) + c*Math.pow(t-1,2); },
+  elastic: function(t){ return t===0||t===1 ? t : Math.pow(2,-10*t)*Math.sin((t*10-0.75)*(2*Math.PI/3))+1; },
+  bounce:  function(t){
+    var n=7.5625, d=2.75;
+    if(t<1/d) return n*t*t;
+    if(t<2/d){ t-=1.5/d; return n*t*t+0.75; }
+    if(t<2.5/d){ t-=2.25/d; return n*t*t+0.9375; }
+    t-=2.625/d; return n*t*t+0.984375;
+  },
+  hold:    function(){ return 0; }
+};
+var ANIM_EASE_LIST = [
+  ["inout","Smooth"], ["linear","Even"], ["in","Speed up"], ["out","Slow down"],
+  ["back","Overshoot"], ["bounce","Bouncy"], ["elastic","Springy"], ["hold","Snap"]
+];
+
+var animFace = { px:0, py:0, blink:0, open:0 };
+var animT = 0, animSel = -1, animPlaying = false, animRaf = 0, animT0 = 0;
+var animOnion = false, animBusy = false, animPreview = false;
+
+function animOn(){ return !!(scene.anim && scene.anim.keys.length); }
+function animDur(){
+  if(!animOn()) return 0;
+  var k = scene.anim.keys;
+  return Math.max(0.1, k[k.length-1].t);
+}
+function animFps(){ return (scene.anim && scene.anim.fps) || 12; }
+function animFrameCount(){ return clamp(Math.round(animDur()*animFps()), 2, 120); }
+
+/* ---------- reading the timeline ---------- */
+function animCapture(t){
+  var k = {
+    t: t, ease:"inout",
+    pose: clonePose(scene.pose),
+    body: { hs:scene.body.hs, thick:scene.body.thick, legs:scene.body.legs, tall:scene.body.tall },
+    face: { px:animFace.px, py:animFace.py, blink:animFace.blink, open:animFace.open,
+            eyes:state.eyes, mouth:state.mouth, brows:state.brows },
+    objs: {}
+  };
+  for(var i=0;i<scene.objs.length;i++){
+    var o = scene.objs[i];
+    k.objs[o.id] = { x:o.x, y:o.y, w:o.w, h:o.h, rot:o.rot||0, op:(o.op===undefined?1:o.op) };
+  }
+  return k;
+}
+function lerp(a,b,t){ return a + (b-a)*t; }
+function animStateAt(t){
+  var keys = scene.anim.keys, i, k0 = keys[0], k1 = null, f = 0, out, j;
+  for(i=0;i<keys.length;i++){
+    if(keys[i].t <= t) k0 = keys[i];
+    else { k1 = keys[i]; break; }
+  }
+  if(k1 && k1.t > k0.t){
+    f = (t - k0.t) / (k1.t - k0.t);
+    f = (ANIM_EASE[k0.ease] || ANIM_EASE.inout)(clamp(f,0,1));
+  }
+  out = { pose:{}, body:{}, face:{}, objs:{} };
+  for(j in k0.pose) out.pose[j] = k1 ? lerp(k0.pose[j], k1.pose[j], f) : k0.pose[j];
+  for(j in k0.body) out.body[j] = k1 ? lerp(k0.body[j], k1.body[j], f) : k0.body[j];
+  out.face.px = k1 ? lerp(k0.face.px, k1.face.px, f) : k0.face.px;
+  out.face.py = k1 ? lerp(k0.face.py, k1.face.py, f) : k0.face.py;
+  out.face.blink = k1 ? lerp(k0.face.blink, k1.face.blink, f) : k0.face.blink;
+  out.face.open = k1 ? lerp(k0.face.open, k1.face.open, f) : k0.face.open;
+  /* expressions swap over on the key, they don't melt into each other */
+  out.face.eyes = k0.face.eyes; out.face.mouth = k0.face.mouth; out.face.brows = k0.face.brows;
+  for(j in k0.objs){
+    var a = k0.objs[j], b = k1 && k1.objs[j];
+    out.objs[j] = b ? { x:lerp(a.x,b.x,f), y:lerp(a.y,b.y,f), w:lerp(a.w,b.w,f),
+                        h:lerp(a.h,b.h,f), rot:lerp(a.rot,b.rot,f), op:lerp(a.op,b.op,f) } : a;
+  }
+  return out;
+}
+function animSceneAt(s){
+  var sc = { pose:s.pose, body:s.body, outfit:scene.outfit, bg:scene.bg, ground:scene.ground, objs:[] }, i, o, n, m;
+  for(i=0;i<scene.objs.length;i++){
+    o = scene.objs[i]; m = s.objs[o.id];
+    if(!m){ sc.objs.push(o); continue; }
+    n = {}; for(var k in o) n[k] = o[k];
+    n.x = m.x; n.y = m.y; n.w = m.w; n.h = m.h; n.rot = m.rot; n.op = m.op;
+    sc.objs.push(n);
+  }
+  return sc;
+}
+function animFaceState(s){
+  if(!s.face.eyes && !s.face.mouth && !s.face.brows) return state;
+  var st2 = cloneState(state);
+  if(EYES[s.face.eyes]) st2.eyes = s.face.eyes;
+  if(MOUTHS[s.face.mouth]) st2.mouth = s.face.mouth;
+  if(BROWS[s.face.brows]) st2.brows = s.face.brows;
+  return st2;
+}
+
+/* ---------- drawing a frame ---------- */
+function animDraw(){
+  animPreview = true;
+  var s = animStateAt(animT), sc = animSceneAt(s), st2 = animFaceState(s), pre = "";
+  if(!stTrans){
+    pre += '<g transform="translate(-120,0) scale(1.6)">'
+        +  pick(BGS, scene.bg || "fade", "plain").draw(palette(state), "anb") + '</g>';
+  }
+  if(animOnion && animSel > 0){
+    var g = scene.anim.keys[animSel-1], gs = { pose:g.pose, body:g.body, face:g.face, objs:g.objs };
+    pre += '<g opacity="0.22">' + studioArt(animFaceState(gs), animSceneAt(gs), "gh", { transparent:true, face:g.face }) + '</g>';
+  }
+  $("stCanvas").innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+BODY_VB+'" '
+    + 'preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+esc(charName || "Your MeMake character")+'">'
+    + pre + studioArt(st2, sc, "an", { transparent:true, face:s.face }) + '</svg>';
+}
+function animStop(){
+  animPlaying = false;
+  if(animRaf) cancelAnimationFrame(animRaf);
+  animRaf = 0;
+  animHead();
+  if($("animPlay")) $("animPlay").textContent = "Play";
+}
+function animPlay(){
+  if(!animOn() || scene.anim.keys.length < 2){ Snd.err(); toast("Add a second keyframe first", true); return; }
+  if(animPlaying){ animStop(); stRefresh(); return; }
+  animPlaying = true;
+  animSel = -1;
+  $("animPlay").textContent = "Pause";
+  var dur = animDur(), fps = animFps();
+  animT0 = (window.performance ? performance.now() : Date.now()) - animT*1000;
+  (function tick(){
+    if(!animPlaying) return;
+    var now = (window.performance ? performance.now() : Date.now());
+    var el = (now - animT0)/1000;
+    if(el > dur){
+      if(scene.anim.loop){ animT0 = now; el = 0; }
+      else { animT = dur; animDraw(); animStop(); stBuildAnim(); return; }
+    }
+    animT = Math.floor(el*fps)/fps;
+    animDraw();
+    animHead();
+    animRaf = requestAnimationFrame(tick);
+  })();
+}
+function animHead(){
+  var bar = $("animHead");
+  if(!bar) return;
+  bar.style.left = (animDur() ? (animT/animDur())*100 : 0) + "%";
+  if($("animTime")) $("animTime").textContent = animT.toFixed(2) + "s / " + animDur().toFixed(2) + "s";
+}
+function animScrub(t){
+  animStop();
+  animT = clamp(t, 0, animDur());
+  animSel = -1;
+  animDraw(); animHead();
+}
+
+/* ---------- keys ---------- */
+function animNew(){
+  scene.anim = { fps:12, loop:true, keys:[ animCapture(0) ] };
+  animT = 0; animSel = 0;
+}
+function animAddKey(){
+  if(!animOn()){ animNew(); Snd.chime(); stPush(); stRefresh(); stBuildAnim(); return; }
+  var t = animT, keys = scene.anim.keys, i;
+  for(i=0;i<keys.length;i++) if(Math.abs(keys[i].t - t) < 0.02) t = keys[keys.length-1].t + 0.4;
+  keys.push(animCapture(t));
+  keys.sort(function(a,b){ return a.t - b.t; });
+  for(i=0;i<keys.length;i++) if(keys[i].t === t) animSel = i;
+  animT = t;
+  Snd.chime(); stPush(); stRefresh(); stBuildAnim();
+  toast("Keyframe added — move things, it updates as you go");
+}
+function animGoKey(i){
+  var k = scene.anim && scene.anim.keys[i];
+  if(!k) return;
+  animStop();
+  animSel = i; animT = k.t;
+  var j;
+  for(j in k.pose) scene.pose[j] = k.pose[j];
+  for(j in k.body) scene.body[j] = k.body[j];
+  animFace.px = k.face.px; animFace.py = k.face.py; animFace.blink = k.face.blink; animFace.open = k.face.open;
+  if(EYES[k.face.eyes]) state.eyes = k.face.eyes;
+  if(MOUTHS[k.face.mouth]) state.mouth = k.face.mouth;
+  if(BROWS[k.face.brows]) state.brows = k.face.brows;
+  for(j=0;j<scene.objs.length;j++){
+    var m = k.objs[scene.objs[j].id];
+    if(m){ var o = scene.objs[j]; o.x=m.x; o.y=m.y; o.w=m.w; o.h=m.h; o.rot=m.rot; o.op=m.op; }
+  }
+  Snd.tick(); stRefresh(); stBuildAnim(); stBuildPose();
+}
+/* selecting a key means you edit it in place — every change writes back */
+function animAutoKey(){
+  if(animPlaying || animBusy || animSel < 0 || !animOn()) return;
+  var k = scene.anim.keys[animSel];
+  if(!k) { animSel = -1; return; }
+  var fresh = animCapture(k.t);
+  fresh.ease = k.ease;
+  scene.anim.keys[animSel] = fresh;
+}
+function animDelKey(){
+  if(!animOn() || animSel < 0) return;
+  scene.anim.keys.splice(animSel,1);
+  if(!scene.anim.keys.length) scene.anim = null;
+  animSel = -1;
+  Snd.tick(); stPush(); stRefresh(); stBuildAnim();
+}
+function animCopyKey(){
+  if(!animOn() || animSel < 0) return;
+  var k = scene.anim.keys[animSel], n = JSON.parse(JSON.stringify(k));
+  n.t = scene.anim.keys[scene.anim.keys.length-1].t + 0.4;
+  scene.anim.keys.push(n);
+  animSel = scene.anim.keys.length - 1;
+  animT = n.t;
+  Snd.chime(); stPush(); stRefresh(); stBuildAnim();
+}
+function animClear(){
+  scene.anim = null; animSel = -1; animT = 0;
+  animStop(); Snd.whoosh(); stPush(); stRefresh(); stBuildAnim();
+  toast("Animation cleared");
+}
+function animRefreshTl(){
+  var el = $("animTl");
+  if(!el) return;
+  var box = document.createElement("div");
+  box.innerHTML = animTimelineHTML();
+  el.parentNode.replaceChild(box.firstChild, el);
+}
+function animSetTime(v){
+  if(!animOn() || animSel < 0) return;
+  var keys = scene.anim.keys, k = keys[animSel], i;
+  k.t = clamp(v, 0, 60);
+  keys.sort(function(a,b){ return a.t - b.t; });
+  for(i=0;i<keys.length;i++) if(keys[i] === k) animSel = i;
+  animT = k.t;
+  animDraw(); animRefreshTl();
+}
+
+/* ---------- ready-made moves ---------- */
+var ANIM_PRESETS = [
+  { name:"Idle", dur:2.6, keys:[
+    { t:0,   p:{} },
+    { t:0.9, p:{ y:-4, lean:1.5 }, f:{} },
+    { t:1.5, p:{ y:-4, lean:1.5 }, f:{ blink:1 } },
+    { t:1.7, p:{ y:-2 }, f:{ blink:0 } },
+    { t:2.6, p:{} } ] },
+  { name:"Wave", dur:1.8, keys:[
+    { t:0,   p:{} },
+    { t:0.3, p:{ aUR:34, aLR:104 }, f:{ open:0.25 } },
+    { t:0.7, p:{ aUR:34, aLR:134 }, f:{ open:0.4 } },
+    { t:1.1, p:{ aUR:34, aLR:104 }, f:{ open:0.25 } },
+    { t:1.5, p:{ aUR:34, aLR:134 }, f:{ open:0.4 } },
+    { t:1.8, p:{} } ] },
+  { name:"Walk", dur:1.2, loop:true, keys:[
+    { t:0,   p:{ lUL:-26, lLL:18, lUR:26, lLR:-34, aUL:24, aLL:-16, aUR:-24, aLR:16, y:0 } },
+    { t:0.3, p:{ lUL:-2, lLL:6, lUR:4, lLR:-8, aUL:2, aUR:-2, y:-7 } },
+    { t:0.6, p:{ lUL:26, lLL:-34, lUR:-26, lLR:18, aUL:-24, aLL:16, aUR:24, aLR:-16, y:0 } },
+    { t:0.9, p:{ lUL:4, lLL:-8, lUR:-2, lLR:6, aUL:-2, aUR:2, y:-7 } },
+    { t:1.2, p:{ lUL:-26, lLL:18, lUR:26, lLR:-34, aUL:24, aLL:-16, aUR:-24, aLR:16, y:0 } } ] },
+  { name:"Run", dur:0.7, loop:true, keys:[
+    { t:0,    p:{ lean:9, lUL:-46, lLL:30, lUR:40, lLR:-64, aUL:-48, aLL:-46, aUR:44, aLR:-52, y:-6 } },
+    { t:0.18, p:{ lean:9, lUL:-6, lLL:16, lUR:4, lLR:-18, aUL:-6, aLL:-40, aUR:6, aLR:-40, y:-16 } },
+    { t:0.35, p:{ lean:9, lUL:40, lLL:-64, lUR:-46, lLR:30, aUL:44, aLL:-52, aUR:-48, aLR:-46, y:-6 } },
+    { t:0.53, p:{ lean:9, lUL:4, lLL:-18, lUR:-6, lLR:16, aUL:6, aLL:-40, aUR:-6, aLR:-40, y:-16 } },
+    { t:0.7,  p:{ lean:9, lUL:-46, lLL:30, lUR:40, lLR:-64, aUL:-48, aLL:-46, aUR:44, aLR:-52, y:-6 } } ] },
+  { name:"Jump", dur:1.5, keys:[
+    { t:0,    p:{}, e:"in" },
+    { t:0.28, p:{ y:44, lUL:-36, lLL:74, lUR:36, lLR:-74, aUL:24, aUR:-24 }, e:"out" },
+    { t:0.62, p:{ y:-96, lUL:-14, lLL:22, lUR:14, lLR:-22, aUL:-138, aLL:-14, aUR:138, aLR:14 }, e:"in" },
+    { t:0.95, p:{ y:38, lUL:-34, lLL:70, lUR:34, lLR:-70, aUL:34, aUR:-34 }, e:"out" },
+    { t:1.5,  p:{} } ] },
+  { name:"Talk", dur:2, keys:[
+    { t:0,    p:{}, f:{ open:0 } },
+    { t:0.22, p:{ tilt:3 }, f:{ open:0.85 } },
+    { t:0.44, p:{ tilt:2 }, f:{ open:0.15 } },
+    { t:0.7,  p:{ tilt:-3 }, f:{ open:0.7 } },
+    { t:0.95, p:{ tilt:-2 }, f:{ open:0.1, blink:1 } },
+    { t:1.12, p:{ tilt:0 }, f:{ open:0.55, blink:0 } },
+    { t:1.4,  p:{ tilt:3 }, f:{ open:0.9 } },
+    { t:1.7,  p:{ tilt:1 }, f:{ open:0.2 } },
+    { t:2,    p:{}, f:{ open:0 } } ] },
+  { name:"Look", dur:3, keys:[
+    { t:0,   p:{}, f:{} },
+    { t:0.6, p:{ neck:-9, tilt:-4 }, f:{ px:-8 } },
+    { t:1.1, p:{ neck:-9 }, f:{ px:-8, blink:1 } },
+    { t:1.3, p:{ neck:-6 }, f:{ px:-6, blink:0 } },
+    { t:1.9, p:{ neck:10, tilt:4 }, f:{ px:8 } },
+    { t:2.5, p:{ neck:0 }, f:{ px:0, py:-4 } },
+    { t:3,   p:{}, f:{} } ] },
+  { name:"Nod", dur:1.2, keys:[
+    { t:0,   p:{} },
+    { t:0.3, p:{ tilt:14, neck:3 } },
+    { t:0.6, p:{ tilt:-6 } },
+    { t:0.9, p:{ tilt:12, neck:2 } },
+    { t:1.2, p:{} } ] },
+  { name:"Dance", dur:1.6, loop:true, keys:[
+    { t:0,   p:{ lean:-8, aUL:-146, aLL:-26, aUR:40, aLR:-70, lUR:26, lLR:-40, tilt:-5 } },
+    { t:0.4, p:{ lean:0, aUL:-96, aLL:-50, aUR:96, aLR:50, lUL:-10, lUR:10, y:-8 } },
+    { t:0.8, p:{ lean:8, aUR:146, aLR:26, aUL:-40, aLL:70, lUL:-26, lLL:40, tilt:5 } },
+    { t:1.2, p:{ lean:0, aUL:-96, aLL:-50, aUR:96, aLR:50, lUL:-10, lUR:10, y:-8 } },
+    { t:1.6, p:{ lean:-8, aUL:-146, aLL:-26, aUR:40, aLR:-70, lUR:26, lLR:-40, tilt:-5 } } ] },
+  { name:"Spin prop", dur:1.4, loop:true, needsObj:true, keys:[
+    { t:0,   p:{}, o:{ rot:0 } },
+    { t:0.7, p:{}, o:{ rot:180 }, e:"linear" },
+    { t:1.4, p:{}, o:{ rot:360 }, e:"linear" } ] },
+  { name:"Pop in", dur:1, keys:[
+    { t:0,   p:{ y:70 }, b:{ hs:0.3, thick:0.6 }, f:{ blink:0.7 }, o:{ op:0.05 }, e:"out" },
+    { t:0.55,p:{ y:-14 }, b:{ hs:0.76, thick:1.12 }, f:{ blink:0 }, o:{ op:1 }, e:"back" },
+    { t:1,   p:{}, b:{}, f:{} } ] }
+];
+function animUsePreset(i){
+  var P = ANIM_PRESETS[i], sel = stObj(stSel), j, key, keys = [], base;
+  if(P.needsObj && !sel){ Snd.err(); toast("Pick a sticker on the picture first", true); return; }
+  animStop();
+  animBusy = true;
+  base = animCapture(0);
+  for(j=0;j<P.keys.length;j++){
+    var src = P.keys[j];
+    key = JSON.parse(JSON.stringify(base));
+    key.t = src.t;
+    key.ease = src.e || "inout";
+    if(src.p) for(var pk in src.p) key.pose[pk] = src.p[pk];
+    if(src.b) for(var bk in src.b) key.body[bk] = src.b[bk];
+    if(src.f) for(var fk in src.f) key.face[fk] = src.f[fk];
+    if(src.o && sel && key.objs[sel.id]){
+      for(var ok in src.o){
+        key.objs[sel.id][ok] = ok === "rot" ? (base.objs[sel.id].rot + src.o[ok]) : src.o[ok];
+      }
+    }
+    keys.push(key);
+  }
+  scene.anim = { fps: 12, loop: P.loop !== false, keys: keys };
+  animSel = -1; animT = 0; animBusy = false;
+  Snd.shuffle(); stPush(); stRefresh(); stBuildAnim();
+  toast(P.name + " — playing");
+  animPlay();
+}
+
+/* ---------- saving a moving picture ---------- */
+function animFrameSVG(i, n, w, h, trans){
+  var t = (i/n) * animDur(), s = animStateAt(t);
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'" viewBox="'+BODY_VB+'">'
+    + studioArt(animFaceState(s), animSceneAt(s), "f"+i, { transparent:trans, face:s.face }) + '</svg>';
+}
+function animFrameInner(i, n){
+  var t = (i/n) * animDur(), s = animStateAt(t);
+  return studioArt(animFaceState(s), animSceneAt(s), "f"+i, { transparent:true, face:s.face });
+}
+function animCheck(){
+  if(!animOn() || scene.anim.keys.length < 2){ Snd.err(); toast("Make an animation first", true); return false; }
+  return true;
+}
+/* one self-contained SVG: the backdrop once, then every frame flicked
+   through with a stepped CSS animation. Plays anywhere, even in an <img>. */
+function animSaveSVG(){
+  if(!animCheck()) return;
+  var n = animFrameCount(), T = animDur(), i, body = "", pre = "";
+  if(!stTrans){
+    pre = '<g transform="translate(-120,0) scale(1.6)">'
+        + pick(BGS, scene.bg || "fade", "plain").draw(palette(state), "sb") + '</g>';
+  }
+  for(i=0;i<n;i++){
+    body += '<g class="f" style="animation-delay:'+(-(i*T/n)).toFixed(3)+'s">' + animFrameInner(i,n) + '</g>';
+  }
+  var css = '.f{opacity:0;animation:mmf '+T.toFixed(3)+'s steps(1,end) infinite}'
+          + '@keyframes mmf{0%{opacity:1}'+(100/n).toFixed(4)+'%{opacity:0}100%{opacity:0}}';
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="640" viewBox="'+BODY_VB+'">'
+          + '<style>'+css+'</style>' + pre + body + '</svg>';
+  saveBlob(new Blob([svg], {type:"image/svg+xml"}), stFileName("anim.svg"));
+  Snd.chime();
+  toast("Saved " + n + " frames in one animated SVG");
+}
+function animLoadFrames(w, h, cb){
+  var n = animFrameCount(), imgs = [], done = 0, bad = false, i;
+  animBusy = true;
+  for(i=0;i<n;i++){
+    (function(i){
+      var img = new Image();
+      img.onload = function(){ if(++done === n && !bad){ animBusy = false; cb(imgs, n); } };
+      img.onerror = function(){ if(!bad){ bad = true; animBusy = false; Snd.err(); toast("Couldn't draw those frames", true); } };
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(animFrameSVG(i, n, w, h, stTrans));
+      imgs[i] = img;
+    })(i);
+  }
+}
+function animSaveSheet(){
+  if(!animCheck()) return;
+  var fw = 200, fh = 320, cols = 6;
+  toast("Drawing the frames\u2026");
+  animLoadFrames(fw, fh, function(imgs, n){
+    var rows = Math.ceil(n/cols);
+    var cv = document.createElement("canvas");
+    cv.width = fw*Math.min(cols,n); cv.height = fh*rows;
+    var ctx = cv.getContext("2d"), i;
+    for(i=0;i<n;i++) ctx.drawImage(imgs[i], (i%cols)*fw, Math.floor(i/cols)*fh, fw, fh);
+    function done(blob){ saveBlob(blob, stFileName("sheet.png")); Snd.shutter(); toast("Saved a " + n + " frame sprite sheet"); }
+    if(cv.toBlob) cv.toBlob(function(b){ b ? done(b) : toast("Couldn't save that sheet", true); }, "image/png");
+    else { var a = document.createElement("a"); a.href = cv.toDataURL("image/png"); a.download = stFileName("sheet.png"); a.click(); }
+  });
+}
+function animCanRecord(){
+  try{
+    return !!(window.MediaRecorder && document.createElement("canvas").captureStream);
+  }catch(e){ return false; }
+}
+function animSaveVideo(){
+  if(!animCheck()) return;
+  if(!animCanRecord()){ Snd.err(); toast("This browser can't record video — try the animated SVG", true); return; }
+  var w = 400, h = 640, fps = animFps();
+  toast("Recording\u2026");
+  animLoadFrames(w, h, function(imgs, n){
+    var cv = document.createElement("canvas");
+    cv.width = w; cv.height = h;
+    var ctx = cv.getContext("2d"), types = ["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"], mime = "", i;
+    for(i=0;i<types.length;i++){
+      if(window.MediaRecorder.isTypeSupported && window.MediaRecorder.isTypeSupported(types[i])){ mime = types[i]; break; }
+    }
+    var rec, chunks = [];
+    try{ rec = new window.MediaRecorder(cv.captureStream(fps), mime ? { mimeType:mime, videoBitsPerSecond:8000000 } : undefined); }
+    catch(e){ Snd.err(); toast("This browser blocked the recorder — try the animated SVG", true); return; }
+    rec.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+    rec.onstop = function(){
+      saveBlob(new Blob(chunks, { type:mime || "video/webm" }), stFileName("webm"));
+      Snd.shutter(); sparkle(4);
+      toast("Saved a " + (n*2) + " frame video");
+    };
+    var f = 0, total = n*2;
+    rec.start();
+    (function step(){
+      ctx.clearRect(0,0,w,h);
+      ctx.drawImage(imgs[f % n], 0, 0, w, h);
+      f++;
+      if(f <= total) setTimeout(step, 1000/fps);
+      else setTimeout(function(){ try{ rec.stop(); }catch(e){} }, 200);
+    })();
+  });
+}
+
+/* ---------- the panel ---------- */
+function animTimelineHTML(){
+  if(!animOn()) return '<div class="tl" id="animTl"><span class="tlempty">No keyframes yet</span></div>';
+  var keys = scene.anim.keys, dur = animDur(), i, out = "";
+  for(i=0;i<keys.length;i++){
+    out += '<button type="button" class="tlk'+(i===animSel?" on":"")+'" data-key="'+i+'" '
+      + 'style="left:'+((keys[i].t/dur)*100).toFixed(2)+'%" title="'+keys[i].t.toFixed(2)+'s" aria-label="Keyframe '+(i+1)+'"></button>';
+  }
+  return '<div class="tl" id="animTl">' + out
+    + '<div class="tlhead" id="animHead" style="left:'+((animT/dur)*100).toFixed(2)+'%"></div></div>';
+}
+function stBuildAnim(){
+  var panel = stPanelEl("anim");
+  if(!panel) return;
+  var has = animOn(), k = has && animSel >= 0 ? scene.anim.keys[animSel] : null;
+  var easeOpts = ANIM_EASE_LIST.map(function(e){
+    return '<option value="'+e[0]+'"'+(k && k.ease===e[0]?" selected":"")+'>'+e[1]+'</option>';
+  }).join("");
+  var fps = animFps();
+  var fpsOpts = [6,8,12,15,24,30].map(function(f){
+    return '<option value="'+f+'"'+(f===fps?" selected":"")+'>'+f+' fps</option>';
+  }).join("");
+
+  panel.innerHTML =
+    '<div class="st-row"><span class="lab">Ready-made</span><div class="pills">'
+    + ANIM_PRESETS.map(function(p,i){ return '<button type="button" class="pill" data-apre="'+i+'">'+esc(p.name)+'</button>'; }).join("")
+    + '</div></div>'
+
+    + '<div class="st-row">'
+    + '<button class="btn btn-sm btn-mint" id="animPlay">'+(animPlaying?"Pause":"Play")+'</button>'
+    + '<button class="btn btn-sm" id="animRewind" title="Back to the start">&#9198;</button>'
+    + '<select id="animFps" aria-label="Frames per second">'+fpsOpts+'</select>'
+    + '<label class="check"><input type="checkbox" id="animLoop"'+(!has || scene.anim.loop ? " checked":"")+'> Loop</label>'
+    + '<span class="count" id="animTime">'+animT.toFixed(2)+'s / '+animDur().toFixed(2)+'s</span>'
+    + '</div>'
+
+    + animTimelineHTML()
+
+    + '<div class="st-row">'
+    + '<button class="btn btn-sm btn-sun" id="animAdd">+ Keyframe</button>'
+    + '<button class="btn btn-sm" id="animCopy"'+(k?"":" disabled")+'>Copy</button>'
+    + '<button class="btn btn-sm btn-coral" id="animDel"'+(k?"":" disabled")+'>Delete</button>'
+    + '<label class="check"><input type="checkbox" id="animOnionOn"'+(animOnion?" checked":"")+'> Onion skin</label>'
+    + '</div>'
+
+    + (k
+      ? '<div class="st-row"><span class="lab">Key '+(animSel+1)+' of '+scene.anim.keys.length+'</span>'
+        + '<input class="sl" type="range" id="animKeyT" min="0" max="'+Math.max(600, Math.round(animDur()*100)+200)+'" value="'+Math.round(k.t*100)+'" aria-label="When this keyframe happens">'
+        + '<span class="count">'+k.t.toFixed(2)+'s</span></div>'
+        + '<div class="st-row"><span class="lab">Easing</span><select id="animEase" aria-label="How it moves into the next key">'+easeOpts+'</select>'
+        + '<span class="count">how it travels to the next key</span></div>'
+      : '<p class="hint">'+(has
+          ? 'Tap a dot on the timeline to edit that keyframe. Whatever you change — pose, face, stickers — is saved into it straight away.'
+          : 'Pick a ready-made move above, or pose your character and hit <strong>+ Keyframe</strong>, move things, then add another.')+'</p>')
+
+    + '<p class="qlab" style="margin:14px 0 8px">Face</p>'
+    + '<div class="st-row"><span class="lab">Look left/right</span><input class="sl" type="range" id="animPx" min="-9" max="9" value="'+animFace.px+'" aria-label="Pupils left or right"></div>'
+    + '<div class="st-row"><span class="lab">Look up/down</span><input class="sl" type="range" id="animPy" min="-7" max="7" value="'+animFace.py+'" aria-label="Pupils up or down"></div>'
+    + '<div class="st-row"><span class="lab">Eyes shut</span><input class="sl" type="range" id="animBlink" min="0" max="100" value="'+Math.round(animFace.blink*100)+'" aria-label="How shut the eyes are"></div>'
+    + '<div class="st-row"><span class="lab">Mouth open</span><input class="sl" type="range" id="animOpen" min="0" max="100" value="'+Math.round(animFace.open*100)+'" aria-label="How open the mouth is"></div>'
+    + '<div class="st-row"><button class="btn btn-sm" id="animFaceReset">Rest the face</button>'
+    + '<button class="btn btn-sm" id="animClear"'+(has?"":" disabled")+'>Clear animation</button></div>'
+
+    + '<p class="qlab" style="margin:14px 0 8px">Save it moving</p>'
+    + '<div class="st-row">'
+    + '<button class="btn btn-sm btn-mint" id="animSvg">Animated SVG</button>'
+    + '<button class="btn btn-sm btn-sun" id="animVid">Video</button>'
+    + '<button class="btn btn-sm" id="animSheet">Sprite sheet</button>'
+    + '</div>'
+    + '<p class="hint">The animated SVG plays in any browser and stays one file. Video saves a WebM. The sheet lays every frame out in a grid.</p>';
+}
+
+/* ---------- panel events, handed over from the studio ---------- */
+function animPanelClick(t, e){
+  var b = t.closest("[data-apre]");
+  if(b){ animUsePreset(+b.dataset.apre); return true; }
+  b = t.closest("[data-key]");
+  if(b){ animGoKey(+b.dataset.key); return true; }
+  switch(t.id){
+    case "animPlay":   animPlay(); return true;
+    case "animRewind": animScrub(0); stBuildAnim(); return true;
+    case "animAdd":    animAddKey(); return true;
+    case "animCopy":   animCopyKey(); return true;
+    case "animDel":    animDelKey(); return true;
+    case "animClear":  animClear(); return true;
+    case "animFaceReset":
+      animFace = { px:0, py:0, blink:0, open:0 };
+      animAutoKey(); stPush(); stRefresh(); stBuildAnim(); return true;
+    case "animSvg":    animSaveSVG(); return true;
+    case "animVid":    animSaveVideo(); return true;
+    case "animSheet":  animSaveSheet(); return true;
+  }
+  /* clicking anywhere along the bar moves the playhead */
+  if(t.closest("#animTl") && animOn() && e){
+    var box = $("animTl").getBoundingClientRect();
+    if(box.width){ animScrub((e.clientX - box.left)/box.width * animDur()); stBuildAnim(); }
+    return true;
+  }
+  return false;
+}
+function animPanelInput(t){
+  var v = +t.value;
+  switch(t.id){
+    case "animPx":    animFace.px = v; break;
+    case "animPy":    animFace.py = v; break;
+    case "animBlink": animFace.blink = v/100; break;
+    case "animOpen":  animFace.open = v/100; break;
+    case "animKeyT":  animSetTime(v/100); return true;
+    default: return false;
+  }
+  animAutoKey();
+  stDraw();
+  return true;
+}
+function animPanelChange(t){
+  if(t.id === "animFps"){ if(animOn()) scene.anim.fps = +t.value; stPush(); return true; }
+  if(t.id === "animLoop"){ if(animOn()) scene.anim.loop = t.checked; stPush(); return true; }
+  if(t.id === "animOnionOn"){ animOnion = t.checked; if(animSel >= 0) animDraw(); return true; }
+  if(t.id === "animKeyT"){ stPush(); stBuildAnim(); return true; }
+  if(t.id === "animEase"){
+    if(animOn() && animSel >= 0){ scene.anim.keys[animSel].ease = t.value; stPush(); }
+    return true;
+  }
+  if(["animPx","animPy","animBlink","animOpen"].indexOf(t.id) >= 0){ stPush(); stRefresh(); return true; }
+  return false;
 }
 
 /* =====================================================================
@@ -3752,7 +4419,7 @@ function copyImage(){
 var shelf = [];
 function loadShelf(){
   try{ shelf = JSON.parse(store.get(KEY.shelf) || "[]") || []; }catch(e){ shelf = []; }
-  if(!(shelf instanceof Array)) shelf = [];
+  if(!Array.isArray(shelf)) shelf = [];
 }
 function saveShelf(){ store.set(KEY.shelf, JSON.stringify(shelf)); }
 function renderShelf(){
@@ -3810,7 +4477,7 @@ function importShelf(file){
   r.onload = function(){
     var data, added = 0, i;
     try{ data = JSON.parse(r.result); }catch(e){ Snd.err(); toast("That file isn't a MeMake shelf", true); return; }
-    var items = (data && data.items) || (data instanceof Array ? data : null);
+    var items = (data && data.items) || (Array.isArray(data) ? data : null);
     if(!items){ Snd.err(); toast("That file isn't a MeMake shelf", true); return; }
     for(i=0;i<items.length;i++){
       if(items[i] && items[i].code && decodeState(items[i].code)){
@@ -4188,7 +4855,10 @@ var API = {
   poseFrom:poseFrom, mirrorPose:mirrorPose, OUTFITS:OUTFITS, TOPS:TOPS, BOTTOMS:BOTTOMS,
   SHOES:SHOES, STAMPS:STAMPS, SHAPES:SHAPES, shapeBody:shapeBody, objMarkup:objMarkup,
   rigLocal:rigLocal, jointFrames:jointFrames,
-  figFrame:figFrame, scene:function(){ return scene; }
+  figFrame:figFrame, scene:function(){ return scene; },
+  ANIM_PRESETS:ANIM_PRESETS, ANIM_EASE:ANIM_EASE, animStateAt:animStateAt,
+  animCapture:animCapture, animFace:function(){ return animFace; },
+  animFrameSVG:animFrameSVG, animFrameCount:animFrameCount
 };
 if(typeof window !== "undefined") window.MeMake = API;
 else if(typeof globalThis !== "undefined") globalThis.MeMake = API;
