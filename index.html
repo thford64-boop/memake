@@ -2416,9 +2416,86 @@ var STAMPS = {
   ghost:  { name:"Ghost",  d:function(c){ return P("M18 92 v-42 q0 -32 32 -32 q32 0 32 32 v42 l-11 -10 l-10 10 l-11 -10 l-10 10 l-11 -10 z", c,5) + dots([[38,52],[62,52]],5,LINE); } },
   bot:    { name:"Robot",  d:function(c){ return RT(20,30,60,52,10,c,5) + RT(30,44,40,18,6,"#2b2145") + dots([[40,53],[60,53]],4,"#3fd6a4") + PL("M50 30 L50 14", LINE,5) + C(50,10,7,c,4); } },
   paint:  { name:"Brush",  d:function(c){ return P("M44 6 h12 v56 h-12 z", "#c9a06a",4) + P("M40 62 h20 v14 q0 18 -10 22 q-10 -4 -10 -22 z", c,5); } },
-  hammer: { name:"Hammer", d:function(c){ return P("M44 34 h12 v64 h-12 z", "#c9a06a",4) + P("M18 6 h64 v28 h-64 z", c,5); } }
+  hammer: { name:"Hammer", d:function(c){ return P("M44 34 h12 v64 h-12 z", "#c9a06a",4) + P("M18 6 h64 v28 h-64 z", c,5); } },
+  camera: { name:"Camera", d:function(c){ return RT(10,28,80,52,10,c,5) + RT(34,14,32,18,5,c,5) + C(50,55,20,shade(c,-0.3),4) + C(50,55,11,shade(c,0.5)) + C(70,40,4,shade(c,0.5)); } },
+  brolly: { name:"Umbrella",d:function(c){ return P("M8 46 Q8 4 50 4 Q92 4 92 46 Q80 34 68 46 Q56 34 50 46 Q44 34 32 46 Q20 34 8 46 Z", c,5) + PL("M50 44 L50 88", shade(c,-0.3), 5) + P("M50 88 q0 10 10 8", "none", 5); } },
+  trophy: { name:"Trophy", d:function(c){ return P("M36 10 h28 v34 q0 22 -14 22 q-14 0 -14 -22 z", c,5) + P("M36 16 q-20 -2 -20 16 q0 16 20 12", "none",4) + P("M64 16 q20 -2 20 16 q0 16 -20 12", "none",4) + P("M44 66 h12 v14 h-12 z", shade(c,-0.2),4) + P("M30 80 h40 v8 h-40 z", shade(c,-0.2),4); } },
+  medal:  { name:"Medal",  d:function(c){ return P("M32 4 L50 50 L22 42 Z", shade(c,-0.3),4) + P("M68 4 L50 50 L78 42 Z", shade(c,-0.15),4) + C(50,66,26,c,5) + C(50,66,19,shade(c,0.35),3) + star(50,66,11,"#ffffff"); } },
+  target: { name:"Target", d:function(c){ return C(50,50,42,c,5) + C(50,50,27,"#ffffff",4) + C(50,50,13,c,4); } },
+  clock:  { name:"Clock",  d:function(c){ return C(50,50,42,c,5) + C(50,50,4,LINE) + PL("M50 50 L50 26", LINE,5) + PL("M50 50 L68 58", LINE,5) + dots([[50,14],[50,86],[14,50],[86,50]],3,LINE); } },
+  mail:   { name:"Envelope",d:function(c){ return RT(8,20,84,60,6,c,5) + P("M8 22 L50 58 L92 22", "none",5); } },
+  rocket: { name:"Rocket", d:function(c){ return P("M50 4 Q74 30 68 66 h-36 Q26 30 50 4 Z", c,5) + C(50,38,11,"#bfe6ff",4) + P("M32 54 L14 78 L32 72 Z", shade(c,-0.25),4) + P("M68 54 L86 78 L68 72 Z", shade(c,-0.25),4) + P("M40 66 h20 l-10 26 z", "#ffc93c",3); } },
+  anchor: { name:"Anchor", d:function(c){ return C(50,16,10,"none",6) + PL("M50 26 L50 82", c,7) + PL("M22 46 h56", c,7) + P("M18 58 q0 26 32 30 q-14 -16 -8 -30 M82 58 q0 26 -32 30 q14 -16 8 -30", "none", 7); } },
+  paw:    { name:"Paw",    d:function(c){ return E(50,64,26,20,c,5) + E(22,34,11,14,c,4) + E(45,18,11,14,c,4) + E(68,22,11,14,c,4) + E(86,42,10,13,c,4); } },
+  icecream:{ name:"Ice cream",d:function(c){ return P("M38 60 L62 60 L52 94 Q50 98 48 94 Z", "#e8c26a",4) + PL("M40 60 L60 60", shade(c,-0.3),3) + C(50,52,20,c,5) + C(50,28,17,shade(c,0.15),5) + C(50,10,12,shade(c,0.32),4); } },
+  donut:  { name:"Donut",  d:function(c){ return C(50,50,38,c,5) + C(50,50,15,"#fdf6e8",4) + dots([[36,32],[64,34],[30,58],[70,62],[48,72],[58,26]],3.5,shade(c,0.55)); } },
+  compass:{ name:"Compass",d:function(c){ return C(50,50,40,"#f4f1fb",5) + dots([[50,16],[50,84],[16,50],[84,50]],2.6,LINE) + P("M50 22 L58 50 L50 78 L42 50 Z", c,4); } },
+  snow:   { name:"Snowflake",d:function(c){ return PL("M50 8 L50 92 M14 26 L86 74 M14 74 L86 26", c,7) + PL("M50 8 L42 18 M50 8 L58 18 M50 92 L42 82 M50 92 L58 82", c,5) + PL("M14 26 L26 24 M14 26 L20 36 M86 74 L74 76 M86 74 L80 64", c,5) + PL("M14 74 L26 76 M14 74 L20 64 M86 26 L74 24 M86 26 L80 36", c,5); } },
+  pad:    { name:"Controller",d:function(c){ return RT(6,32,88,40,18,c,5) + C(26,52,9,shade(c,-0.3),3) + PL("M26 46 v12 M20 52 h12", "#fff",4) + dots([[72,44],[82,54],[62,54],[72,64]],5,shade(c,-0.3)); } },
+  cans:   { name:"Headphones",d:function(c){ return PL("M14 58 Q14 10 50 10 Q86 10 86 58", c,7) + RT(6,50,22,34,8,c,5) + RT(72,50,22,34,8,c,5); } },
+  bulb:   { name:"Idea",   d:function(c){ return C(50,38,26,c,5) + RT(38,62,24,12,4,shade(c,-0.3),4) + PL("M42 78 h16 M42 84 h16", shade(c,-0.3),4) + PL("M50 4 L50 14 M20 16 L28 24 M80 16 L72 24", c,5); } }
 };
 var STAMP_KEYS = (function(){ var a=[],k; for(k in STAMPS) a.push(k); return a; })();
+
+/* ---------------------------------------------------------------
+   FACE PROPS — stickers meant for the face itself: blush, freckles,
+   a monocle and so on. Each is a normal stamp (so it saves, layers,
+   recolours and pins exactly like any other object) plus an anchor
+   (x,y) and a default size (w,h), all in the same 400x400 head-canvas
+   units as the eyes and mouth above, so they land in the right spot
+   on any head size without extra maths at the call site.
+   --------------------------------------------------------------- */
+var FACE_PROPS = {
+  blush:   { name:"Blush",       x:200, y:197, w:172, h:54, d:function(c){
+    return E(18,50,11,22,c).replace("/>",' opacity="0.55"/>') + E(82,50,11,22,c).replace("/>",' opacity="0.55"/>');
+  } },
+  freckles:{ name:"Freckles",    x:200, y:192, w:130, h:50, d:function(c){
+    return dots([[14,42,2.6],[26,58,2.3],[6,64,2],[86,42,2.6],[74,58,2.3],[94,64,2],[42,18,2.1],[58,18,2.1],[50,10,2.3]], 2.3, c, 0.8);
+  } },
+  mole:    { name:"Mole",        x:231, y:207, w:16, h:16, d:function(c){ return C(50,50,40,c); } },
+  mustache:{ name:"Mustache",    x:200, y:220, w:96, h:30, d:function(c){
+    return P("M2 78 Q16 8 50 40 Q84 8 98 78 Q78 34 50 52 Q22 34 2 78 Z", c, 4);
+  } },
+  monocle: { name:"Monocle",     x:237, y:176, w:66, h:80, d:function(c){
+    return '<circle cx="50" cy="42" r="30" fill="none" stroke="'+c+'" stroke-width="6"/>'
+      + '<circle cx="50" cy="42" r="30" fill="none" stroke="'+LINE+'" stroke-width="2"/>'
+      + PL("M76 62 Q92 78 80 100", c, 4);
+  } },
+  eyepatch:{ name:"Eyepatch",    x:163, y:176, w:60, h:54, d:function(c){
+    return E(50,48,28,24,c,5) + PL("M6 14 Q50 -4 96 40", c, 5);
+  } },
+  tears:   { name:"Tears",       x:200, y:199, w:112, h:46, d:function(c){
+    return '<path d="M20 8 Q34 30 20 44 Q6 30 20 8 Z" fill="'+c+'" opacity="0.85"/>'
+      + '<path d="M80 8 Q94 30 80 44 Q66 30 80 8 Z" fill="'+c+'" opacity="0.85"/>';
+  } },
+  sweat:   { name:"Sweat drop",  x:252, y:138, w:24, h:32, d:function(c){
+    return '<path d="M50 4 Q80 46 50 80 Q20 46 50 4 Z" fill="'+c+'" opacity="0.85"/>';
+  } },
+  bandage: { name:"Bandage",     x:150, y:210, w:46, h:28, d:function(c){
+    return RT(6,26,88,48,10,c,4) + PL("M28 26 L28 74 M72 26 L72 74", "#ffffff", 4);
+  } },
+  scar:    { name:"Scar",        x:248, y:196, w:28, h:46, d:function(c){
+    return PL("M30 4 L70 96", c, 6) + PL("M38 26 L62 26 M38 50 L62 50 M38 74 L62 74", c, 4);
+  } },
+  nosering:{ name:"Nose ring",   x:200, y:208, w:24, h:24, d:function(c){
+    return '<circle cx="50" cy="42" r="24" fill="none" stroke="'+c+'" stroke-width="8"/>';
+  } },
+  whiskers:{ name:"Whiskers",    x:200, y:204, w:120, h:40, d:function(c){
+    return PL("M54 14 L14 10 M54 26 L14 26 M54 38 L14 36", c, 3)
+      + PL("M46 14 L86 10 M46 26 L86 26 M46 38 L86 36", c, 3);
+  } },
+  cheekstripes:{ name:"Cheek marks", x:200, y:196, w:110, h:36, d:function(c){
+    return PL("M20 4 L34 26 M30 4 L44 26", c, 5) + PL("M80 4 L66 26 M70 4 L56 26", c, 5);
+  } },
+  clownnose:{ name:"Clown nose", x:200, y:200, w:38, h:38, d:function(c){
+    return C(50,50,34,c,5) + C(38,38,9,shade(c,0.4));
+  } },
+  thirdeye:{ name:"Third eye",   x:200, y:132, w:46, h:32, d:function(c){
+    return E(50,50,36,22,"#ffffff",5) + C(50,53,13,c) + C(50,53,5,LINE);
+  } }
+};
+var FACE_PROP_KEYS = (function(){ var a=[],k; for(k in FACE_PROPS) a.push(k); return a; })();
+(function(){ for(var k in FACE_PROPS) STAMPS[k] = { name:FACE_PROPS[k].name, d:FACE_PROPS[k].d }; })();
 
 /* ---------- plain shapes ---------- */
 var SHAPES = {
@@ -3172,6 +3249,32 @@ function stAddStamp(key){
   stAdd({ kind:"stamp", stamp:key, w:112, h:112, rot:0, fill:stPen.color, attach:"world" });
   toast(STAMPS[key].name + " added — pin it to a hand below");
 }
+/* drop a face-part sticker right on the current character's face, already
+   pinned to their head so it turns and tilts along with them. fp.x/y/w/h
+   are in the same 400x400 head-canvas units as the eyes and mouth, so the
+   maths below is the same "where does this land on the neck-hinge" trick
+   used for every other pinned prop -- just starting from a point on the
+   head art instead of a joint. */
+function stAddFaceProp(key){
+  var fp = FACE_PROPS[key];
+  if(!fp) return;
+  var ch = curChar(), R = rigLocal(ch.pose, ch.body), hs = ch.body.hs;
+  var rad = R.headA * Math.PI/180;
+  var lx = (fp.x - 200) * hs, ly = (fp.y - 252) * hs;
+  var rig = {
+    x: R.neck.x + (lx*Math.cos(rad) - ly*Math.sin(rad)),
+    y: R.neck.y + (lx*Math.sin(rad) + ly*Math.cos(rad))
+  };
+  var world = toWorld(rig, figFrame(ch, scene));
+  var headKey = ch.id + ":head";
+  var local = frameLocal(world, stFrames()[headKey]);
+  var w = fp.w * hs, h = fp.h * hs;
+  stAdd({
+    kind:"stamp", stamp:key, x: local.x - w/2, y: local.y - h/2, w:w, h:h,
+    rot:0, fill: stPen.color, attach: headKey
+  });
+  toast(fp.name + " added — drag to line it up, or unpin it below");
+}
 function stAddText(){
   var t = ($("stText").value || "").trim(), fs = 46;
   if(!t){ Snd.err(); toast("Type something first", true); return; }
@@ -3350,16 +3453,23 @@ function stBuildScene(){
     + '<p class="hint">Everyone gets their own face, clothes and pose. Tap a character on the picture to start working on them.</p>';
 }
 function stBuildAdd(){
-  var k, shapes = "", stamps = "";
+  var k, i, shapes = "", stamps = "", faceProps = "";
   for(k in SHAPES){
     shapes += '<button type="button" class="mini" data-shape="'+k+'" title="'+esc(SHAPES[k])+'">'
       + '<svg viewBox="-4 -4 108 108">' + shapeBody({ kind:k, w:100, h:100, fill:"#8ed0ff", ink:true, sw:6 }) + '</svg>'
       + '<span class="cap">'+esc(SHAPES[k])+'</span></button>';
   }
-  for(k in STAMPS){
+  for(i=0;i<STAMP_KEYS.length;i++){
+    k = STAMP_KEYS[i];
     stamps += '<button type="button" class="mini" data-stamp="'+k+'" title="'+esc(STAMPS[k].name)+'">'
       + '<svg viewBox="-4 -4 108 108">' + STAMPS[k].d("#8ed0ff") + '</svg>'
       + '<span class="cap">'+esc(STAMPS[k].name)+'</span></button>';
+  }
+  for(i=0;i<FACE_PROP_KEYS.length;i++){
+    k = FACE_PROP_KEYS[i];
+    faceProps += '<button type="button" class="mini" data-face="'+k+'" title="'+esc(FACE_PROPS[k].name)+'">'
+      + '<svg viewBox="-4 -4 108 108">' + FACE_PROPS[k].d("#8ed0ff") + '</svg>'
+      + '<span class="cap">'+esc(FACE_PROPS[k].name)+'</span></button>';
   }
   stPanelEl("add").innerHTML =
     '<div class="st-row"><span class="lab">Colour</span>'+swatchHTML("pen", stPen.color)+'</div>'
@@ -3367,7 +3477,9 @@ function stBuildAdd(){
     + '<button class="btn btn-sm btn-mint" id="stAddText">Add words</button></div>'
     + '<div class="st-row"><button class="btn btn-sm btn-sun" id="stAddImg">Import a picture</button>'
     + '<span class="count">png, jpg, gif or webp &middot; it becomes a sticker</span></div>'
-    + '<p class="qlab" style="margin:13px 0 7px">Shapes</p><div class="grid-mini">'+shapes+'</div>'
+    + '<p class="qlab" style="margin:13px 0 7px">Face</p><div class="grid-mini">'+faceProps+'</div>'
+    + '<p class="hint" style="margin:7px 0 0">These drop right on whoever is picked in the cast bar, already pinned so they turn with the head.</p>'
+    + '<p class="qlab" style="margin:15px 0 7px">Shapes</p><div class="grid-mini">'+shapes+'</div>'
     + '<p class="qlab" style="margin:15px 0 7px">Props</p><div class="grid-mini">'+stamps+'</div>';
 }
 function stBuildDraw(){
@@ -3388,7 +3500,7 @@ function stBuildLayers(){
   for(i=scene.objs.length-1;i>=0;i--){
     o = scene.objs[i];
     nm = o.kind === "text" ? ('"'+o.text+'"')
-       : o.kind === "stamp" ? (STAMPS[o.stamp] ? STAMPS[o.stamp].name : "Prop")
+       : o.kind === "stamp" ? (FACE_PROPS[o.stamp] ? FACE_PROPS[o.stamp].name : (STAMPS[o.stamp] ? STAMPS[o.stamp].name : "Prop"))
        : o.kind === "path" ? "Drawing"
        : o.kind === "img" ? "Picture" : (SHAPES[o.kind] || "Shape");
     out += '<div class="lay'+(o.id===stSel?" on":"")+'" data-lay="'+o.id+'">'
@@ -3624,6 +3736,7 @@ function stPanelClick(e){
   if((b = t.closest("[data-size]"))) return stSetSize(+b.dataset.size);
   if((b = t.closest("[data-shape]"))) return stAddShape(b.dataset.shape);
   if((b = t.closest("[data-stamp]"))) return stAddStamp(b.dataset.stamp);
+  if((b = t.closest("[data-face]")))  return stAddFaceProp(b.dataset.face);
   if((b = t.closest("[data-cw]")))    return stPickColor(b.dataset.cw, b.dataset.v);
   if((b = t.closest("[data-tool]")))  return stSetTool(b.dataset.tool);
   if((b = t.closest("[data-up]")))    { stSel = b.dataset.up; return stArrange(1); }
@@ -3800,7 +3913,7 @@ function animDur(){
   return Math.max(0.1, k[k.length-1].t);
 }
 function animFps(){ return (scene.anim && scene.anim.fps) || 12; }
-function animFrameCount(){ return clamp(Math.round(animDur()*animFps()), 2, 120); }
+function animFrameCount(){ return clamp(Math.round(animDur()*animFps()), 2, 180); }
 
 /* ---------- reading the timeline ---------- */
 function animCapture(t){
@@ -4240,7 +4353,7 @@ function stBuildAnim(){
     return '<option value="'+e[0]+'"'+(k && k.ease===e[0]?" selected":"")+'>'+e[1]+'</option>';
   }).join("");
   var fps = animFps();
-  var fpsOpts = [6,8,12,15,24,30].map(function(f){
+  var fpsOpts = [6,8,12,15,24,30,60].map(function(f){
     return '<option value="'+f+'"'+(f===fps?" selected":"")+'>'+f+' fps</option>';
   }).join("");
 
@@ -5254,7 +5367,8 @@ var API = {
   ANIM_PRESETS:ANIM_PRESETS, ANIM_EASE:ANIM_EASE, animStateAt:animStateAt,
   animCapture:animCapture, defaultChar:defaultChar, CANVAS_SIZES:CANVAS_SIZES,
   curChar:function(){ return curChar(); }, sceneFrames:sceneFrames,
-  animFrameSVG:animFrameSVG, animFrameCount:animFrameCount
+  animFrameSVG:animFrameSVG, animFrameCount:animFrameCount,
+  FACE_PROPS:FACE_PROPS, FACE_PROP_KEYS:FACE_PROP_KEYS, STAMP_KEYS:STAMP_KEYS
 };
 if(typeof window !== "undefined") window.MeMake = API;
 else if(typeof globalThis !== "undefined") globalThis.MeMake = API;
