@@ -307,6 +307,21 @@
   @media (prefers-reduced-motion:reduce){
     *{transition:none !important;animation:none !important}
   }
+
+@keyframes mmb{0%,100%{transform:translateY(0) rotate(calc(var(--mm-sw,0)*-1deg)) scale(1)}50%{transform:translateY(var(--mm-ba,-5px)) rotate(calc(var(--mm-sw,0)*1deg)) scale(var(--mm-br,1))}}
+.stage.anim .mm-bob{transform-box:view-box;transform-origin:50% 95%;animation:mmb var(--mm-bt,3.6s) ease-in-out infinite}
+.stage.anim .mm-eyes{animation-duration:var(--mm-bl,5.4s)}
+.mmx-fab{position:fixed;right:16px;bottom:16px;z-index:40}
+.mmx{position:fixed;right:16px;bottom:74px;width:min(340px,calc(100vw - 32px));max-height:min(78vh,740px);overflow:auto;z-index:41;background:var(--panel);border:3px solid var(--ink);border-radius:var(--radius);box-shadow:7px 7px 0 var(--ink);padding:14px}
+.mmx[hidden]{display:none}
+.mmx h3{margin:14px 0 6px;font-size:13px;letter-spacing:.6px;text-transform:uppercase;opacity:.75;border-top:3px dashed var(--soft);padding-top:10px}
+.mmx h3:first-child{margin-top:0;border:0;padding:0}
+.mmx label{display:grid;grid-template-columns:98px 1fr 40px;gap:8px;align-items:center;font-size:13px;font-weight:500;margin:5px 0}
+.mmx input[type=range]{width:100%;accent-color:var(--mint)}
+.mmx output{font-size:12px;opacity:.7;text-align:right}
+.mmx .row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.mmx select{font:inherit;font-size:13px;border:3px solid var(--ink);border-radius:999px;padding:4px 10px;background:var(--field);color:var(--ink)}
+.stage{touch-action:pan-y}
 </style>
 </head>
 <body>
@@ -1929,10 +1944,11 @@ function buildSVG(st, uid, opts){
     body += drawNeck(c);
     body += clothes.draw(c, uid + "c");
   }
+  var HS = body.length;
   if(hair.back) body += fitHair(hair.back(c));
   body += drawFace(c);
   if(beard.back) body += beard.back(c);
-  body += pick(BROWS, st.brows, "none").draw(c);
+  body += MMX("brow", pick(BROWS, st.brows, "none").draw(c));
 
   /* opts.face carries the animated bits: where the pupils point, how shut the
      eyes are, how far the mouth is open. Everything is a plain transform, so
@@ -1952,19 +1968,20 @@ function buildSVG(st, uid, opts){
       eyeArt += both('<path d="M147 176 q16 8 32 0" fill="none" stroke="'+LINE+'" stroke-width="6" stroke-linecap="round" opacity="'+((bl-0.55)/0.45).toFixed(2)+'"/>');
     }
   }
-  body += '<g class="mm-eyes">' + eyeArt + '</g>';
-  body += pick(NOSES, st.nose, "none").draw(c);
+  body += MMX("eye", '<g class="mm-eyes">' + eyeArt + '</g>');
+  body += MMX("nose", pick(NOSES, st.nose, "none").draw(c));
   var mouthArt = pick(MOUTHS, st.mouth, "smile").draw(c, uid + "m");
   if(fa && fa.open > 0){
     var mo = clamp(fa.open, 0, 1);
     mouthArt = '<g transform="translate(200,213) scale('+(1 - 0.14*mo).toFixed(3)+','+(1 + 1.25*mo).toFixed(3)+') translate(-200,-213)">' + mouthArt + '</g>';
   }
-  body += mouthArt;
+  body += MMX("mouth", mouthArt);
   if(beard.front) body += beard.front(c);
   body += pick(GLASSES, st.glasses, "none").draw(c);
   if(hair.front) body += fitHair(hair.front(c));
   body += pick(HATS, st.hat, "none").draw(c);
   body += pick(EXTRAS, st.extra, "none").draw(c);
+  body = body.slice(0, HS) + MMH(body.slice(HS));
   if(!opts.headOnly) body += pick(BUDDIES, st.buddy, "none").draw(c);
 
   /* head only is what the full body rig hangs on the neck */
@@ -5528,9 +5545,176 @@ function init(){
   });
 }
 
+
+/* ===== Tweaks: face-shape, camera and animation sliders (state + helpers) ===== */
+var TW_DEF = { fw:1, fh:1, hs:1, tilt:0, es:1, ey:0, bw:0, ns:1, ny:0, ms:1, my:0, zoom:1, px:0, py:0, spd:1, bob:5, sway:0, breath:0, blink:5.4, mus:false, mvol:0.35, mstyle:"chill" };
+var TW = (function(){
+  var o = {}, k, v = {};
+  try{ v = JSON.parse(localStorage.getItem("memake.tw") || "{}") || {}; }catch(e){}
+  for(k in TW_DEF) o[k] = (typeof v[k] === typeof TW_DEF[k]) ? v[k] : TW_DEF[k];
+  return o;
+})();
+function twSave(){ try{ localStorage.setItem("memake.tw", JSON.stringify(TW)); }catch(e){} }
+function twG(t, a){ return t ? '<g transform="' + t + '">' + a + '</g>' : a; }
+function twAbout(x, y, sc, dy){ return "translate(0," + dy + ") translate(" + x + "," + y + ") scale(" + sc + ") translate(" + -x + "," + -y + ")"; }
+function MMX(k, a){
+  var t = "";
+  if(k === "eye" && (TW.es !== 1 || TW.ey)) t = twAbout(200, 174, TW.es, TW.ey);
+  else if(k === "brow" && TW.bw) t = "translate(0," + TW.bw + ")";
+  else if(k === "nose" && (TW.ns !== 1 || TW.ny)) t = twAbout(200, 195, TW.ns, TW.ny);
+  else if(k === "mouth" && (TW.ms !== 1 || TW.my)) t = twAbout(200, 213, TW.ms, TW.my);
+  return twG(t, a);
+}
+function MMH(a){
+  if(TW.fw === 1 && TW.fh === 1 && TW.hs === 1 && !TW.tilt) return a;
+  return twG("translate(200,250) rotate(" + TW.tilt + ") scale(" + (TW.fw * TW.hs).toFixed(3) + "," + (TW.fh * TW.hs).toFixed(3) + ") translate(-200,-250)", a);
+}
+function twView(){
+  var z = TW.zoom, sz = 400 / z, cy = 200 - 40 * Math.min(1, Math.max(0, (z - 1) / 0.85));
+  return (200 + TW.px - sz / 2).toFixed(1) + " " + (cy + TW.py - sz / 2).toFixed(1) + " " + sz.toFixed(1) + " " + sz.toFixed(1);
+}
+VIEWS.custom = twView();
+
 if(typeof document !== "undefined"){
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
+}
+
+/* ===== Tweaks panel, wheel zoom and background music ===== */
+var MUS = (function(){
+  var ac, mg, timer, step = 0, next = 0, on = false;
+  var CH = { chill:[[57,60,64,67],[53,57,60,64],[48,52,55,59],[55,59,62,65]], sparkle:[[60,64,67,72],[57,60,64,69],[53,57,60,65],[55,59,62,67]], dream:[[50,57,62,66],[47,54,59,62],[43,50,55,59],[45,52,57,61]] };
+  var W = { chill:"triangle", sparkle:"square", dream:"sine" }, BPM = { chill:76, sparkle:118, dream:54 };
+  function fq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
+  function nt(t, m, d, type, g){
+    var o = ac.createOscillator(), a = ac.createGain();
+    o.type = type; o.frequency.value = fq(m);
+    a.gain.setValueAtTime(0.0001, t); a.gain.linearRampToValueAtTime(g, t + 0.04); a.gain.exponentialRampToValueAtTime(0.0005, t + d);
+    o.connect(a); a.connect(mg); o.start(t); o.stop(t + d + 0.05);
+  }
+  function tick(){
+    var sty = W[TW.mstyle] ? TW.mstyle : "chill", sp = 60 / BPM[sty] / 2;
+    while(next < ac.currentTime + 0.3){
+      var ch = CH[sty][Math.floor(step / 8) % 4], s = step % 8, sq = sty === "sparkle";
+      if(s === 0){ ch.forEach(function(m){ nt(next, m, sp * 7.5, W[sty], 0.045); }); nt(next, ch[0] - 24, sp * 3.6, "sine", 0.17); }
+      if(s === 4) nt(next, ch[0] - 24, sp * 3, "sine", 0.12);
+      if(Math.random() < (sq ? 0.85 : s % 2 === 0 ? 0.5 : 0.15)) nt(next, ch[Math.floor(Math.random() * 4)] + 12 + (Math.random() < 0.3 ? 12 : 0), sp * (sty === "dream" ? 4 : 1.6), sq ? "square" : "sine", sq ? 0.03 : 0.055);
+      next += sp; step++;
+    }
+  }
+  function start(){
+    try{
+      if(!ac){ var C = window.AudioContext || window.webkitAudioContext; ac = new C(); mg = ac.createGain(); mg.connect(ac.destination); }
+      ac.resume(); mg.gain.cancelScheduledValues(ac.currentTime); mg.gain.setTargetAtTime(TW.mvol, ac.currentTime, 0.3);
+      next = ac.currentTime + 0.1; step = 0; clearInterval(timer); timer = setInterval(tick, 100); on = true;
+    }catch(e){ on = false; }
+    return on;
+  }
+  function stop(){ on = false; clearInterval(timer); if(mg) mg.gain.setTargetAtTime(0, ac.currentTime, 0.15); }
+  return { start:start, stop:stop, isOn:function(){ return on; }, vol:function(v){ if(mg && on) mg.gain.setTargetAtTime(v, ac.currentTime, 0.05); }, restart:function(){ step = 0; } };
+})();
+
+var TW_UI = [
+  ["Face shape", [["fw","Width",.7,1.4,.01],["fh","Height",.75,1.3,.01],["hs","Head size",.7,1.3,.01],["tilt","Head tilt",-15,15,.5]]],
+  ["Features", [["es","Eye size",.6,1.6,.01],["ey","Eye height",-14,14,.5],["bw","Brow height",-14,14,.5],["ns","Nose size",.5,1.8,.01],["ny","Nose height",-10,10,.5],["ms","Mouth size",.5,1.7,.01],["my","Mouth height",-10,12,.5]]],
+  ["Camera", [["zoom","Zoom",.8,3.5,.01],["px","Pan left / right",-120,120,1],["py","Pan up / down",-120,120,1]]],
+  ["Animation", [["spd","Speed",.2,3,.05],["bob","Bounce",0,22,.5],["sway","Sway",0,12,.25],["breath","Breathe %",0,10,.25],["blink","Blink gap (s)",1,10,.1]]]
+];
+var TW_SHAPE = "fw fh hs tilt es ey bw ns ny ms my", TW_CAM = "zoom px py";
+
+function twAnim(){
+  var st = $("stage"); if(!st) return;
+  st.style.setProperty("--mm-bt", (3.6 / TW.spd).toFixed(2) + "s");
+  st.style.setProperty("--mm-ba", "-" + TW.bob + "px");
+  st.style.setProperty("--mm-sw", TW.sway);
+  st.style.setProperty("--mm-br", 1 + TW.breath / 100);
+  st.style.setProperty("--mm-bl", (TW.blink / TW.spd).toFixed(2) + "s");
+}
+function twRedraw(cam){
+  if(cam){ VIEWS.custom = twView(); cfg.zoom = "custom"; segSet("zoomSeg", "zoom", "custom"); saveCfg(); }
+  drawStage();
+  try{ if(inStudio()) stRefresh(); }catch(e){}
+}
+function twSync(){
+  var els = document.querySelectorAll("#mmx [data-k]"), i, k, v;
+  for(i = 0; i < els.length; i++){
+    k = els[i].dataset.k; v = TW[k]; els[i].value = v;
+    els[i].parentNode.querySelector("output").textContent = Math.round(v * 100) / 100;
+  }
+  $("mmxSty").value = TW.mstyle;
+  var on = MUS.isOn();
+  $("mmxMus").textContent = on ? "Pause" : "Play";
+  $("musBtn").style.background = on ? "var(--mint)" : "";
+}
+function twMusic(){
+  if(MUS.isOn()){ MUS.stop(); TW.mus = false; } else { TW.mus = MUS.start(); }
+  twSave(); twSync();
+  toast(MUS.isOn() ? "Music on" : "Music off");
+}
+function twInit(){
+  var fab = document.createElement("div"), p = document.createElement("div"), h = "";
+  fab.className = "mmx-fab"; fab.innerHTML = '<button class="btn btn-sun" id="mmxBtn" title="Tweaks (T)">&#127899; Tweaks</button>';
+  p.className = "mmx"; p.id = "mmx"; p.hidden = true;
+  TW_UI.forEach(function(sec){
+    h += "<h3>" + sec[0] + "</h3>";
+    sec[1].forEach(function(r){ h += '<label>' + r[1] + '<input type="range" data-k="' + r[0] + '" min="' + r[2] + '" max="' + r[3] + '" step="' + r[4] + '"><output></output></label>'; });
+  });
+  h += '<h3>Background music</h3><div class="row"><button class="btn btn-sm btn-mint" id="mmxMus">Play</button><select id="mmxSty" aria-label="Music style"><option value="chill">Chill lo-fi</option><option value="sparkle">Sparkle chip</option><option value="dream">Dreamy pads</option></select></div>';
+  h += '<label>Volume<input type="range" data-k="mvol" min="0" max="1" step="0.01"><output></output></label>';
+  h += '<div class="row"><button class="btn btn-sm btn-coral" id="mmxRnd">Random face shape</button><button class="btn btn-sm" id="mmxRst">Reset tweaks</button></div>';
+  h += '<p class="hint">Scroll over the picture to zoom. Press <kbd>T</kbd> for this panel, <kbd>P</kbd> for music.</p>';
+  p.innerHTML = h;
+  document.body.appendChild(fab); document.body.appendChild(p);
+  var mb = document.createElement("button");
+  mb.className = "btn btn-ico"; mb.id = "musBtn"; mb.title = "Background music (P)"; mb.setAttribute("aria-label", "Background music"); mb.innerHTML = "&#127925;";
+  var ta = document.querySelector(".top-actions"); ta.insertBefore(mb, $("themeBtn"));
+  mb.addEventListener("click", twMusic);
+  $("mmxMus").addEventListener("click", twMusic);
+  $("mmxBtn").addEventListener("click", function(){ p.hidden = !p.hidden; });
+  $("mmxSty").addEventListener("change", function(){ TW.mstyle = this.value; MUS.restart(); twSave(); });
+  p.addEventListener("input", function(e){
+    var k = e.target.dataset && e.target.dataset.k; if(!k) return;
+    TW[k] = +e.target.value;
+    e.target.parentNode.querySelector("output").textContent = Math.round(TW[k] * 100) / 100;
+    if((" " + TW_SHAPE + " ").indexOf(" " + k + " ") >= 0) twRedraw(false);
+    else if((" " + TW_CAM + " ").indexOf(" " + k + " ") >= 0) twRedraw(true);
+    else if(k === "mvol") MUS.vol(TW.mvol);
+    else twAnim();
+    twSave();
+  });
+  $("mmxRnd").addEventListener("click", function(){
+    function r(a, b){ return Math.round((a + Math.random() * (b - a)) * 100) / 100; }
+    TW.fw = r(.8, 1.3); TW.fh = r(.85, 1.2); TW.hs = r(.9, 1.15); TW.tilt = r(-6, 6);
+    TW.es = r(.8, 1.4); TW.ey = r(-6, 6); TW.bw = r(-6, 6); TW.ns = r(.8, 1.4); TW.ny = r(-4, 4); TW.ms = r(.8, 1.4); TW.my = r(-4, 5);
+    twSync(); twRedraw(false); twSave(); Snd.pop();
+  });
+  $("mmxRst").addEventListener("click", function(){
+    for(var k in TW_DEF) if(k !== "mus" && k !== "mstyle" && k !== "mvol") TW[k] = TW_DEF[k];
+    twSync(); twAnim(); twRedraw(true); twSave(); toast("Tweaks reset");
+  });
+  $("zoomSeg").addEventListener("click", function(){
+    TW.zoom = cfg.zoom === "close" ? 1.85 : 1; TW.px = 0; TW.py = 0; twSync(); twSave();
+  });
+  $("stage").addEventListener("wheel", function(e){
+    e.preventDefault();
+    TW.zoom = clamp(TW.zoom * (e.deltaY < 0 ? 1.08 : 1 / 1.08), .8, 3.5);
+    twSync(); twRedraw(true); twSave();
+  }, { passive:false });
+  document.addEventListener("keydown", function(e){
+    var t = e.target; if((t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT")) || e.ctrlKey || e.metaKey || e.altKey || inStudio()) return;
+    if(e.key === "t" || e.key === "T") p.hidden = !p.hidden;
+    else if(e.key === "p" || e.key === "P") twMusic();
+  });
+  if(TW.mus){
+    var go = function(){ document.removeEventListener("pointerdown", go); document.removeEventListener("keydown", go); if(TW.mus && !MUS.isOn()){ MUS.start(); twSync(); } };
+    document.addEventListener("pointerdown", go); document.addEventListener("keydown", go);
+  }
+  if(cfg.zoom === "custom") segSet("zoomSeg", "zoom", "custom");
+  twSync(); twAnim();
+}
+if(typeof document !== "undefined"){
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", twInit);
+  else twInit();
 }
 
 /* exposed for testing */
