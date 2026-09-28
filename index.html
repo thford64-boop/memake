@@ -561,7 +561,7 @@ function lum(hex){
 }
 /* pupG leaves @PX@/@PY@ markers; whichever copy of the eye they land in (left, or the
    mirrored right one) fills them with that eye's own look */
-function lookFill(s, e, flip){ return s.replace(/@PX@/g, ((flip ? -1 : 1) * e.x).toFixed(1)).replace(/@PY@/g, e.y.toFixed(1)); }
+function lookFill(s, e, flip){ return s.replace(/@P([XY])(?:\*([\d.]+))?@/g, function(m, a, k){ return ((a === "X" ? (flip ? -1 : 1) * e.x : e.y) * (k ? +k : 1)).toFixed(1); }); }
 function mirror(s){ if(EYE_LOOK) s = lookFill(s, EYE_LOOK.r, true); return '<g transform="translate(400,0) scale(-1,1)">'+s+'</g>'; }
 function both(s){ return (EYE_LOOK ? lookFill(s, EYE_LOOK.l, false) : s) + mirror(s); }
 /* look per eye in percent (100% = full pupil travel); older px/py data moves both eyes */
@@ -777,9 +777,10 @@ var BGS = {
    --------------------------------------------------------------- */
 /* set while an animation frame is drawn, so pupils can look around */
 var EYE_LOOK = null;
-function pupG(inner){
+function pupG(inner, k){
   if(!EYE_LOOK) return inner;
-  return '<g class="mm-pup" transform="translate(@PX@,@PY@)">'+inner+'</g>';
+  var m = k ? "*" + k : "";
+  return '<g class="mm-pup" transform="translate(@PX'+m+'@,@PY'+m+'@)">'+inner+'</g>';
 }
 function eyeBall(rx,ry,pr,dx,dy,c){
   return '<ellipse cx="163" cy="174" rx="'+rx+'" ry="'+ry+'" fill="#fff" stroke="'+LINE+'" stroke-width="4.5"/>'
@@ -1940,7 +1941,7 @@ function buildSVG(st, uid, opts){
   EYE_LOOK = (lk && (lk.lx || lk.ly || lk.rx || lk.ry))
     ? { l:{ x:lk.lx*0.09, y:lk.ly*0.07 }, r:{ x:lk.rx*0.09, y:lk.ry*0.07 } } : null;
   var eyeArt = pick(EYES, st.eyes, "round").draw(c);
-  if(EYE_LOOK) eyeArt = lookFill(eyeArt, EYE_LOOK.l, false);
+  if(EYE_LOOK) eyeArt = lookFill(eyeArt, { x:(EYE_LOOK.l.x + EYE_LOOK.r.x)/2, y:(EYE_LOOK.l.y + EYE_LOOK.r.y)/2 }, false);   /* centre eyes follow both */
   EYE_LOOK = null;
   if(fa && fa.blink > 0){
     var bl = clamp(fa.blink, 0, 1);
@@ -1971,6 +1972,26 @@ function buildSVG(st, uid, opts){
   return out + '<g class="mm-bob"' + (opts.bob ? ' transform="translate(0,'+opts.bob.toFixed(2)+')"' : "") + '>' + body + '</g>';
 }
 
+/* ---------- more eyes ---------- */
+function eyeAt(cx,cy,rx,ry,pr,c,k){
+  return '<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" fill="#fff" stroke="'+LINE+'" stroke-width="4"/>'
+    + pupG('<circle cx="'+cx+'" cy="'+(cy+1)+'" r="'+pr+'" fill="'+c.eye+'"/><circle cx="'+(cx-pr*0.4)+'" cy="'+(cy-pr*0.4)+'" r="'+(pr*0.34)+'" fill="#fff"/>', k);
+}
+function strokeEye(d, c, w){ return '<path d="'+d+'" fill="none" stroke="'+c.eye+'" stroke-width="'+(w||7)+'" stroke-linecap="round"/>'; }
+EYES.cyclops = { name:"Cyclops",     draw:function(c){ return eyeAt(200,176,27,29,12,c,1); } };
+EYES.three   = { name:"Third eye",   draw:function(c){ return both(eyeBall(15,17,8,0,0,c)) + eyeAt(200,139,10,11,5,c,0.5); } };
+EYES.four    = { name:"Four eyes",   draw:function(c){ return both(eyeAt(163,160,11,12,5.5,c,0.6) + eyeAt(163,190,11,12,5.5,c,0.6)); } };
+EYES.spider  = { name:"Spider",      draw:function(c){ return both(eyeAt(165,178,11,12,5.5,c,0.6) + eyeAt(148,163,7,8,3.5,c,0.4) + eyeAt(178,158,7,8,3.5,c,0.4)); } };
+EYES.hearts  = { name:"Hearts",      draw:function(c){ return both(pupG('<path d="M163 190 c-24 -15 -22 -34 -8 -34 c7 0 8 5 8 8 c0 -3 1 -8 8 -8 c14 0 16 19 -8 34 z" fill="'+c.eye+'"/>', 0.6)); } };
+EYES.stars   = { name:"Starry",      draw:function(c){ return both(pupG(star(163,175,17,c.eye,0), 0.6)); } };
+EYES.ko      = { name:"Knocked out", draw:function(c){ return both(strokeEye("M150 162 l26 26 M176 162 l-26 26", c)); } };
+EYES.dizzy   = { name:"Dizzy",       draw:function(c){ return both(strokeEye("M163 176 a3 3 0 1 1 6 0 a7 7 0 1 1 -14 0 a11 11 0 1 1 22 0 a15 15 0 1 1 -30 0", c, 4)); } };
+EYES.cat     = { name:"Cat",         draw:function(c){
+  return both('<ellipse cx="163" cy="175" rx="16" ry="17" fill="'+c.eye+'" stroke="'+LINE+'" stroke-width="4.5"/>'
+    + pupG('<ellipse cx="163" cy="175" rx="3.6" ry="13" fill="'+LINE+'"/><circle cx="158" cy="168" r="2.6" fill="#fff"/>', 0.6)); } };
+EYES.robot   = { name:"Robot",       draw:function(c){
+  return both(RT(146,161,34,30,8,"#20263a",4.5) + pupG('<circle cx="163" cy="176" r="8" fill="'+c.eye+'"/><circle cx="160" cy="173" r="2.6" fill="#fff"/>', 0.7)); } };
+EYES.anime   = { name:"Anime",       draw:function(c){ return both(eyeBall(19,23,12,0,1,c)); } };
 var VIEWS = { full:"0 0 400 400", close:"92 52 216 216" };
 
 /* wraps the art in a circle / sticker cut and drops a name plate on the bottom */
@@ -2686,7 +2707,16 @@ var FIG_SPAN = 470;   /* roughly head top to heel at scale 1 */
 function fitScale(h){ return clamp(Math.round(((h - 46)/FIG_SPAN)*100)/100, 0.25, 1); }
 
 /* ---------- scene defaults, save and load ---------- */
-function defaultScene(){
+/* the timeline you edit is the selected character's own; scene.anim points at it */
+function wireAnim(sc){
+  function cur(){ return sc.cast[sc.sel] || sc.cast[0]; }
+  Object.defineProperty(sc, "anim", { enumerable:false, configurable:true,
+    get:function(){ var c = cur(); return (c && c.anim) || null; },
+    set:function(v){ var c = cur(); if(c) c.anim = v; } });
+  return sc;
+}
+function defaultScene(){ return wireAnim(defaultScene0()); }
+function defaultScene0(){
   return {
     w:400, h:640,
     cast: [ defaultChar("c1") ],
@@ -2873,7 +2903,11 @@ function cleanScene(raw){
       if(o) d.objs.push(o);
     }
   }
-  d.anim = cleanAnim(raw.anim, d.cast, d.objs);
+  /* every character keeps its own animation; a shared one from an older save is split up */
+  d.cast.forEach(function(ch, n){
+    var rc = raw.cast && raw.cast[n];
+    ch.anim = cleanAnim((rc && rc.anim) || raw.anim, [ch], d.objs);
+  });
   return d;
 }
 
@@ -3649,7 +3683,7 @@ function packScene(){
   try{
     return btoa(encodeURIComponent(JSON.stringify({
       w:scene.w, h:scene.h, cast:scene.cast, sel:scene.sel, bg:scene.bg,
-      ground:scene.ground, objs:scene.objs, anim:scene.anim
+      ground:scene.ground, objs:scene.objs
     }))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
   }catch(e){ return null; }
 }
@@ -3921,12 +3955,13 @@ var animT = 0, animSel = -1, animPlaying = false, animRaf = 0, animT0 = 0;
 var animOnion = false, animBusy = false, animPreview = false;
 
 function animOn(){ return !!(scene.anim && scene.anim.keys.length); }
-function animDur(){
-  if(!animOn()) return 0;
-  var k = scene.anim.keys;
-  return Math.max(0.1, k[k.length-1].t);
+function animDur(){      /* the whole picture: the longest character */
+  var d = 0, any = false;
+  scene.cast.forEach(function(c){ var k = c.anim && c.anim.keys; if(k && k.length){ any = true; d = Math.max(d, k[k.length-1].t); } });
+  return any ? Math.max(0.1, d) : 0;
 }
-function animFps(){ return (scene.anim && scene.anim.fps) || 12; }
+function animAny(){ return scene.cast.some(function(c){ return c.anim && c.anim.keys.length > 1; }); }
+function animFps(){ var f = 0; scene.cast.forEach(function(c){ if(c.anim && c.anim.keys.length) f = Math.max(f, c.anim.fps || 12); }); return f || 12; }
 function animFrameCount(){ return clamp(Math.round(animDur()*animFps()), 2, 180); }
 
 /* ---------- reading the timeline ---------- */
@@ -3935,6 +3970,7 @@ function animCapture(t){
   var k = { t:t, ease:"inout", cast:{}, objs:{} }, i, ch, st, o;
   for(i=0;i<scene.cast.length;i++){
     ch = scene.cast[i];
+    if(ch !== curChar()) continue;      /* a key holds the selected character only */
     st = charState(ch, state);
     k.cast[ch.id] = {
       pose: clonePose(ch.pose),
@@ -3952,8 +3988,8 @@ function animCapture(t){
   return k;
 }
 function lerp(a,b,t){ return a + (b-a)*t; }
-function animStateAt(t){
-  var keys = scene.anim.keys, i, k0 = keys[0], k1 = null, f = 0, out, j;
+function animStateAt(t, an){
+  var keys = (an || scene.anim).keys, i, k0 = keys[0], k1 = null, f = 0, out, j;
   for(i=0;i<keys.length;i++){
     if(keys[i].t <= t) k0 = keys[i];
     else { k1 = keys[i]; break; }
@@ -4000,6 +4036,23 @@ function animSceneAt(s){
   }
   return sc;
 }
+/* every character runs its own timeline: its own length, loop and frame rate */
+function animAt(t){
+  var out = { cast:{}, objs:{} };
+  scene.cast.forEach(function(ch){
+    var a = ch.anim, ks = a && a.keys;
+    if(!ks || !ks.length) return;
+    var d = ks[ks.length-1].t, fps = a.fps || 12, lt = d > 0 ? (a.loop ? t % d : Math.min(t, d)) : 0;
+    var s = animStateAt(Math.floor(lt*fps + 1e-6)/fps, a), id, o, q, i, moves;
+    if(s.cast[ch.id]) out.cast[ch.id] = s.cast[ch.id];
+    for(id in s.objs){                  /* a sticker moves with whichever character moved it */
+      moves = false; o = ks[0].objs[id];
+      for(i = 1; o && i < ks.length; i++) for(q in o) if(ks[i].objs[id] && ks[i].objs[id][q] !== o[q]) moves = true;
+      if(moves) out.objs[id] = s.objs[id];
+    }
+  });
+  return out;
+}
 /* ---------- drawing a frame ---------- */
 function animBgArt(uid){
   var w = sceneW(scene), h = sceneH(scene), k = Math.max(w,h)/400;
@@ -4009,7 +4062,7 @@ function animBgArt(uid){
 function animDraw(){
   animPreview = true;
   stSyncSel();
-  var s = animStateAt(animT), sc = animSceneAt(s), pre = "";
+  var s = animAt(animT), sc = animSceneAt(s), pre = "";
   if(!stTrans) pre += animBgArt("anb");
   if(animOnion && animSel > 0){
     var g = scene.anim.keys[animSel-1];
@@ -4027,7 +4080,7 @@ function animStop(){
   if($("animPlay")) $("animPlay").textContent = "Play";
 }
 function animPlay(){
-  if(!animOn() || scene.anim.keys.length < 2){ Snd.err(); toast("Add a second keyframe first", true); return; }
+  if(!animAny()){ Snd.err(); toast("Add a second keyframe first", true); return; }
   if(animPlaying){ animStop(); stRefresh(); return; }
   animPlaying = true;
   animSel = -1;
@@ -4039,7 +4092,7 @@ function animPlay(){
     var now = (window.performance ? performance.now() : Date.now());
     var el = (now - animT0)/1000;
     if(el > dur){
-      if(scene.anim.loop){ animT0 = now; el = 0; }
+      if(scene.cast.some(function(c){ return c.anim && c.anim.loop; })){ animT0 = now; el = 0; }
       else { animT = dur; animDraw(); animStop(); stBuildAnim(); return; }
     }
     animT = Math.floor(el*fps)/fps;
@@ -4260,17 +4313,17 @@ function animUsePreset(i){
 
 /* ---------- saving a moving picture ---------- */
 function animFrameSVG(i, n, w, h, trans){
-  var t = (i/n) * animDur(), s = animStateAt(t);
+  var t = (i/n) * animDur(), s = animAt(t);
   return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" '
     + 'width="'+w+'" height="'+h+'" viewBox="'+sceneVB(scene)+'">'
     + studioArt(state, animSceneAt(s), "f"+i, { transparent:trans }) + '</svg>';
 }
 function animFrameInner(i, n){
-  var t = (i/n) * animDur(), s = animStateAt(t);
+  var t = (i/n) * animDur(), s = animAt(t);
   return studioArt(state, animSceneAt(s), "f"+i, { transparent:true });
 }
 function animCheck(){
-  if(!animOn() || scene.anim.keys.length < 2){ Snd.err(); toast("Make an animation first", true); return false; }
+  if(!animAny()){ Snd.err(); toast("Make an animation first", true); return false; }
   return true;
 }
 /* one self-contained SVG: the backdrop once, then every frame flicked
@@ -4385,13 +4438,14 @@ function stBuildAnim(){
   var easeOpts = ANIM_EASE_LIST.map(function(e){
     return '<option value="'+e[0]+'"'+(k && k.ease===e[0]?" selected":"")+'>'+e[1]+'</option>';
   }).join("");
-  var fps = animFps();
+  var fps = (scene.anim && scene.anim.fps) || 12;
   var fpsOpts = [6,8,12,15,24,30,60].map(function(f){
     return '<option value="'+f+'"'+(f===fps?" selected":"")+'>'+f+' fps</option>';
   }).join("");
 
   panel.innerHTML =
-    '<div class="st-row"><span class="lab">Ready-made</span><div class="pills">'
+    '<p class="hint" style="margin:0 0 10px">Animating <strong>'+esc(charLabel(curChar(), scene.sel))+'</strong>. Every character keeps its own moves and Play runs them together. Pick another character to give it different ones.</p>'
+    + '<div class="st-row"><span class="lab">Ready-made</span><div class="pills">'
     + ANIM_PRESETS.map(function(p,i){ return '<button type="button" class="pill" data-apre="'+i+'">'+esc(p.name)+'</button>'; }).join("")
     + '</div></div>'
 
