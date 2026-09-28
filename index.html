@@ -344,6 +344,8 @@
         <button class="btn btn-mint" id="pngBtn">Save PNG</button>
         <button class="btn btn-sun" id="svgBtn">Save SVG</button>
         <button class="btn btn-sm" id="clipBtn">Copy image</button>
+        <button class="btn btn-sm btn-mint" id="animSvgBtn">Animated SVG</button>
+        <button class="btn btn-sm btn-sun" id="vidBtn">Video</button>
         <button class="btn btn-sm" id="shelfAddBtn">Add to shelf</button>
       </div>
 
@@ -557,8 +559,17 @@ function lum(hex){
   var c = hex2rgb(hex);
   return (c[0]*0.299 + c[1]*0.587 + c[2]*0.114)/255;
 }
-function mirror(s){ return '<g transform="translate(400,0) scale(-1,1)">'+s+'</g>'; }
-function both(s){ return s + mirror(s); }
+/* pupG leaves @PX@/@PY@ markers; whichever copy of the eye they land in (left, or the
+   mirrored right one) fills them with that eye's own look */
+function lookFill(s, e, flip){ return s.replace(/@PX@/g, ((flip ? -1 : 1) * e.x).toFixed(1)).replace(/@PY@/g, e.y.toFixed(1)); }
+function mirror(s){ if(EYE_LOOK) s = lookFill(s, EYE_LOOK.r, true); return '<g transform="translate(400,0) scale(-1,1)">'+s+'</g>'; }
+function both(s){ return (EYE_LOOK ? lookFill(s, EYE_LOOK.l, false) : s) + mirror(s); }
+/* look per eye in percent (100% = full pupil travel); older px/py data moves both eyes */
+function faceEyes(f){
+  if(f.lx !== undefined) return { lx:f.lx, ly:f.ly||0, rx:f.rx||0, ry:f.ry||0 };
+  var x = (f.px||0)/9*100, y = (f.py||0)/7*100;
+  return { lx:x, ly:y, rx:x, ry:y };
+}
 /* same shape on both eyes without flipping it — for things like a $ sign */
 function twin(s){ return s + '<g transform="translate(74,0)">'+s+'</g>'; }
 
@@ -768,7 +779,7 @@ var BGS = {
 var EYE_LOOK = null;
 function pupG(inner){
   if(!EYE_LOOK) return inner;
-  return '<g class="mm-pup" transform="translate('+EYE_LOOK.x.toFixed(1)+','+EYE_LOOK.y.toFixed(1)+')">'+inner+'</g>';
+  return '<g class="mm-pup" transform="translate(@PX@,@PY@)">'+inner+'</g>';
 }
 function eyeBall(rx,ry,pr,dx,dy,c){
   return '<ellipse cx="163" cy="174" rx="'+rx+'" ry="'+ry+'" fill="#fff" stroke="'+LINE+'" stroke-width="4.5"/>'
@@ -1925,9 +1936,11 @@ function buildSVG(st, uid, opts){
   /* opts.face carries the animated bits: where the pupils point, how shut the
      eyes are, how far the mouth is open. Everything is a plain transform, so
      it works with every eye and mouth in the set. */
-  var fa = opts.face;
-  EYE_LOOK = (fa && (fa.px || fa.py)) ? { x:fa.px, y:fa.py } : null;
+  var fa = opts.face, lk = fa && faceEyes(fa);
+  EYE_LOOK = (lk && (lk.lx || lk.ly || lk.rx || lk.ry))
+    ? { l:{ x:lk.lx*0.09, y:lk.ly*0.07 }, r:{ x:lk.rx*0.09, y:lk.ry*0.07 } } : null;
   var eyeArt = pick(EYES, st.eyes, "round").draw(c);
+  if(EYE_LOOK) eyeArt = lookFill(eyeArt, EYE_LOOK.l, false);
   EYE_LOOK = null;
   if(fa && fa.blink > 0){
     var bl = clamp(fa.blink, 0, 1);
@@ -1955,7 +1968,7 @@ function buildSVG(st, uid, opts){
 
   /* head only is what the full body rig hangs on the neck */
   if(opts.headOnly) return body;
-  return out + '<g class="mm-bob">' + body + '</g>';
+  return out + '<g class="mm-bob"' + (opts.bob ? ' transform="translate(0,'+opts.bob.toFixed(2)+')"' : "") + '>' + body + '</g>';
 }
 
 var VIEWS = { full:"0 0 400 400", close:"92 52 216 216" };
@@ -2754,6 +2767,7 @@ function cleanFace(raw){
   var f = { px:0, py:0, blink:0, open:0 }, k;
   if(raw && typeof raw === "object"){
     for(k in FACE_KEYS) f[k] = safeNum(raw[k], 0, FACE_KEYS[k][0], FACE_KEYS[k][1]);
+    ["lx","ly","rx","ry"].forEach(function(q){ if(raw[q] !== undefined) f[q] = safeNum(raw[q], 0, -100, 100); });
     if(EYES[raw.eyes]) f.eyes = raw.eyes;
     if(MOUTHS[raw.mouth]) f.mouth = raw.mouth;
     if(BROWS[raw.brows]) f.brows = raw.brows;
@@ -3928,6 +3942,8 @@ function animCapture(t){
       face: { px:ch.face.px, py:ch.face.py, blink:ch.face.blink, open:ch.face.open,
               eyes:st.eyes, mouth:st.mouth, brows:st.brows }
     };
+    var fe = faceEyes(ch.face), ff = k.cast[ch.id].face;
+    ff.lx = fe.lx; ff.ly = fe.ly; ff.rx = fe.rx; ff.ry = fe.ry;
   }
   for(i=0;i<scene.objs.length;i++){
     o = scene.objs[i];
@@ -3951,8 +3967,9 @@ function animStateAt(t){
     var a = k0.cast[cid], bb = k1 && k1.cast[cid], c = { pose:{}, body:{}, face:{} };
     for(j in a.pose) c.pose[j] = bb ? lerp(a.pose[j], bb.pose[j], f) : a.pose[j];
     for(j in a.body) c.body[j] = bb ? lerp(a.body[j], bb.body[j], f) : a.body[j];
-    c.face.px = bb ? lerp(a.face.px, bb.face.px, f) : a.face.px;
-    c.face.py = bb ? lerp(a.face.py, bb.face.py, f) : a.face.py;
+    var EA = faceEyes(a.face), EB = bb ? faceEyes(bb.face) : EA;
+    c.face.px = 0; c.face.py = 0;
+    ["lx","ly","rx","ry"].forEach(function(q){ c.face[q] = lerp(EA[q], EB[q], f); });
     c.face.blink = bb ? lerp(a.face.blink, bb.face.blink, f) : a.face.blink;
     c.face.open = bb ? lerp(a.face.open, bb.face.open, f) : a.face.open;
     /* expressions swap over on the key, they don't melt into each other */
@@ -4071,7 +4088,8 @@ function animGoKey(i){
     if(!c) continue;
     for(m in c.pose) ch.pose[m] = c.pose[m];
     for(m in c.body) ch.body[m] = c.body[m];
-    ch.face = { px:c.face.px, py:c.face.py, blink:c.face.blink, open:c.face.open };
+    var fe = faceEyes(c.face);
+    ch.face = { px:0, py:0, lx:fe.lx, ly:fe.ly, rx:fe.rx, ry:fe.ry, blink:c.face.blink, open:c.face.open };
     /* the expression the key pinned becomes that character's own face again */
     if(j === scene.sel){
       if(EYES[c.face.eyes]) state.eyes = c.face.eyes;
@@ -4220,7 +4238,12 @@ function animUsePreset(i){
     key.ease = src.e || "inout";
     if(src.p) for(var pk in src.p) if(pk !== "s") key.cast[cid].pose[pk] = src.p[pk];
     if(src.b) for(var bk in src.b) key.cast[cid].body[bk] = src.b[bk];
-    if(src.f) for(var fk in src.f) key.cast[cid].face[fk] = src.f[fk];
+    if(src.f) for(var fk in src.f){
+      var fv = src.f[fk], ff = key.cast[cid].face;
+      if(fk === "px") ff.lx = ff.rx = fv/9*100;        /* ready-made looks move both eyes */
+      else if(fk === "py") ff.ly = ff.ry = fv/7*100;
+      else ff[fk] = fv;
+    }
     if(src.o && sel && key.objs[sel.id]){
       for(var ok in src.o){
         key.objs[sel.id][ok] = ok === "rot" ? (base.objs[sel.id].rot + src.o[ok]) : src.o[ok];
@@ -4345,6 +4368,16 @@ function animTimelineHTML(){
   return '<div class="tl" id="animTl">' + out
     + '<div class="tlhead" id="animHead" style="left:'+((animT/dur)*100).toFixed(2)+'%"></div></div>';
 }
+function eyeRows(fc){
+  var e = faceEyes(fc), out = "";
+  [["lx","Left eye","&harr;","left or right"],["ly","Left eye","&varr;","up or down"],
+   ["rx","Right eye","&harr;","left or right"],["ry","Right eye","&varr;","up or down"]].forEach(function(q){
+    var id = "anim" + q[0].charAt(0).toUpperCase() + q[0].charAt(1), v = Math.round(e[q[0]]);
+    out += '<div class="st-row"><span class="lab">'+q[1]+' '+q[2]+'</span><input class="sl" type="range" id="'+id+'" min="-100" max="100" value="'+v+'" aria-label="'+q[1]+' looks '+q[3]+', in percent">'
+        +  '<span class="count" id="'+id+'V">'+v+'%</span></div>';
+  });
+  return out;
+}
 function stBuildAnim(){
   var panel = stPanelEl("anim");
   if(!panel) return;
@@ -4390,8 +4423,7 @@ function stBuildAnim(){
           : 'Pick a ready-made move above, or pose your character and hit <strong>+ Keyframe</strong>, move things, then add another.')+'</p>')
 
     + '<p class="qlab" style="margin:14px 0 8px">Face</p>'
-    + '<div class="st-row"><span class="lab">Look left/right</span><input class="sl" type="range" id="animPx" min="-9" max="9" value="'+fc.px+'" aria-label="Pupils left or right"></div>'
-    + '<div class="st-row"><span class="lab">Look up/down</span><input class="sl" type="range" id="animPy" min="-7" max="7" value="'+fc.py+'" aria-label="Pupils up or down"></div>'
+    + eyeRows(fc)
     + '<div class="st-row"><span class="lab">Eyes shut</span><input class="sl" type="range" id="animBlink" min="0" max="100" value="'+Math.round(fc.blink*100)+'" aria-label="How shut the eyes are"></div>'
     + '<div class="st-row"><span class="lab">Mouth open</span><input class="sl" type="range" id="animOpen" min="0" max="100" value="'+Math.round(fc.open*100)+'" aria-label="How open the mouth is"></div>'
     + '<div class="st-row"><button class="btn btn-sm" id="animFaceReset">Rest the face</button>'
@@ -4437,8 +4469,12 @@ function animPanelClick(t, e){
 function animPanelInput(t){
   var v = +t.value;
   switch(t.id){
-    case "animPx":    curChar().face.px = v; break;
-    case "animPy":    curChar().face.py = v; break;
+    case "animLx": case "animLy": case "animRx": case "animRy":
+      var fc = curChar().face, fe = faceEyes(fc), q = t.id.slice(4).toLowerCase(), rd = $(t.id + "V");
+      fc.lx = fe.lx; fc.ly = fe.ly; fc.rx = fe.rx; fc.ry = fe.ry; fc.px = 0; fc.py = 0;
+      fc[q] = v;
+      if(rd) rd.textContent = Math.round(v) + "%";
+      break;
     case "animBlink": curChar().face.blink = v/100; break;
     case "animOpen":  curChar().face.open = v/100; break;
     case "animKeyT":  animSetTime(v/100); return true;
@@ -4457,7 +4493,7 @@ function animPanelChange(t){
     if(animOn() && animSel >= 0){ scene.anim.keys[animSel].ease = t.value; stPush(); }
     return true;
   }
-  if(["animPx","animPy","animBlink","animOpen"].indexOf(t.id) >= 0){ stPush(); stRefresh(); return true; }
+  if(["animLx","animLy","animRx","animRy","animBlink","animOpen"].indexOf(t.id) >= 0){ stPush(); stRefresh(); return true; }
   return false;
 }
 
@@ -4583,13 +4619,13 @@ var KEY = { shelf:"memake.shelf", last:"memake.last", cfg:"memake.cfg" };
    ===================================================================== */
 var current = CATS[0].key, exportSize = 1024, thumbSeq = 0;
 var charName = "", locks = {}, filter = "";
-var cfg = { sound:true, vol:0.55, theme:"day", anim:true, shape:"square", zoom:"full", nameOn:false, trans:false };
+var cfg = { sound:true, vol:0.55, theme:"day", anim:true, shape:"square", zoom:"full", nameOn:false, trans:false, eye:{ lx:0, ly:0, rx:0, ry:0 } };
 
 function $(id){ return document.getElementById(id); }
 function catByKey(k){ for(var i=0;i<CATS.length;i++) if(CATS[i].key===k) return CATS[i]; return CATS[0]; }
 function catIndex(k){ for(var i=0;i<CATS.length;i++) if(CATS[i].key===k) return i; return 0; }
 function stageOpts(){
-  return { shape:cfg.shape, zoom:cfg.zoom, name:charName, showName:cfg.nameOn, alt:(charName||"Your MeMake character") };
+  return { shape:cfg.shape, zoom:cfg.zoom, name:charName, showName:cfg.nameOn, alt:(charName||"Your MeMake character"), face:mainFace() };
 }
 
 /* ---------- toasts ---------- */
@@ -4863,7 +4899,7 @@ function boop(){
 function exportSVGString(size){
   var s = svgMarkup(state, "save", VIEWS[cfg.zoom], {
     shape:cfg.shape, zoom:cfg.zoom, name:charName, showName:cfg.nameOn,
-    transparent:cfg.trans, alt:(charName||"MeMake character")
+    transparent:cfg.trans, alt:(charName||"MeMake character"), face:mainFace()
   });
   return s.replace("<svg ", '<svg width="'+size+'" height="'+size+'" ');
 }
@@ -4921,6 +4957,92 @@ function copyImage(){
       Snd.err(); toast("The browser blocked the copy — use Save PNG", true);
     });
   }, function(){ Snd.err(); toast("Couldn't build that picture", true); });
+}
+
+/* ---------- the character moving: eyes, animated SVG, video ---------- */
+var EYE_UI = [["lx","Left eye","&harr;"],["ly","Left eye","&varr;"],["rx","Right eye","&harr;"],["ry","Right eye","&varr;"]];
+var MAIN_N = 48, MAIN_T = 3.6;     /* frames and seconds in one loop */
+function eyeCfg(k){ return +(cfg.eye && cfg.eye[k]) || 0; }
+/* w scales the look (0 = eyes centred, 1 = the sliders); b is how shut the eyes are */
+function mainFace(w, b){
+  w = (w === undefined) ? 1 : w; b = b || 0;
+  var f = { px:0, py:0, lx:eyeCfg("lx")*w, ly:eyeCfg("ly")*w, rx:eyeCfg("rx")*w, ry:eyeCfg("ry")*w, blink:b, open:0 };
+  return (f.lx || f.ly || f.rx || f.ry || b) ? f : null;
+}
+function buildEyeUI(){
+  var grid = document.querySelector(".opt-grid"), h = "";
+  if(!cfg.eye) cfg.eye = { lx:0, ly:0, rx:0, ry:0 };
+  EYE_UI.forEach(function(e){
+    var v = Math.round(eyeCfg(e[0])), way = e[2] === "&harr;" ? "left or right" : "up or down";
+    h += '<div class="opt"><span>'+e[1]+' '+e[2]+'</span><input class="sl" type="range" min="-100" max="100" value="'+v+'" data-eye="'+e[0]+'" aria-label="'+e[1]+' looks '+way+', in percent"><span class="count">'+v+'%</span></div>';
+  });
+  h += '<div class="opt"><span>Eyes</span><button type="button" class="btn btn-sm" id="eyeReset">Centre both</button></div>';
+  grid.insertAdjacentHTML("beforeend", h);
+  grid.addEventListener("input", function(e){
+    var k = e.target.dataset && e.target.dataset.eye;
+    if(!k) return;
+    cfg.eye[k] = +e.target.value;
+    e.target.nextElementSibling.textContent = e.target.value + "%";
+    drawStage(); saveCfg();
+  });
+  $("eyeReset").addEventListener("click", function(){
+    EYE_UI.forEach(function(e){ cfg.eye[e[0]] = 0; });
+    Array.prototype.forEach.call(grid.querySelectorAll("[data-eye]"), function(s){ s.value = 0; s.nextElementSibling.textContent = "0%"; });
+    drawStage(); saveCfg();
+  });
+}
+function smoothStep(a, b, x){ x = clamp((x - a)/(b - a), 0, 1); return x*x*(3 - 2*x); }
+/* one loop: the eyes drift to the sliders' look and back, one blink, a gentle bob */
+function mainFrame(i){
+  var p = i / MAIN_N;
+  var g = smoothStep(0.10, 0.30, p) - smoothStep(0.62, 0.84, p);
+  var b = (p > 0.88 && p < 0.98) ? 1 - Math.abs((p - 0.93)/0.05) : 0;
+  return svgMarkup(state, "m" + i, VIEWS[cfg.zoom], {
+    shape:cfg.shape, zoom:cfg.zoom, name:charName, showName:cfg.nameOn, transparent:cfg.trans,
+    alt:(charName||"MeMake character"), face:mainFace(g, b), bob:-2.5 * (1 - Math.cos(p * 2 * Math.PI))
+  });
+}
+function saveMainSVG(){
+  var i, body = "", css;
+  for(i = 0; i < MAIN_N; i++){
+    body += '<g class="f" style="animation-delay:'+(-(i*MAIN_T/MAIN_N)).toFixed(3)+'s">'
+         + mainFrame(i).replace(/^<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "") + '</g>';
+  }
+  css = '.f{opacity:0;animation:mmf '+MAIN_T+'s steps(1,end) infinite}'
+      + '@keyframes mmf{0%{opacity:1}'+(100/MAIN_N).toFixed(4)+'%{opacity:0}100%{opacity:0}}';
+  saveBlob(new Blob(['<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="'+VIEWS[cfg.zoom]+'"><style>'+css+'</style>'+body+'</svg>'],
+    {type:"image/svg+xml"}), fileName("anim.svg"));
+  Snd.chime(); toast("Saved " + MAIN_N + " frames in one animated SVG");
+}
+function saveMainVideo(){
+  if(!animCanRecord()){ Snd.err(); toast("This browser can't record video — try the animated SVG", true); return; }
+  var S = 720, fps = MAIN_N / MAIN_T, imgs = [], done = 0, bad = false, i;
+  toast("Recording\u2026");
+  function record(){
+    var cv = document.createElement("canvas"), ctx, types = ["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"], mime = "", j, chunks = [], r;
+    cv.width = S; cv.height = S; ctx = cv.getContext("2d");
+    for(j = 0; j < types.length; j++) if(window.MediaRecorder.isTypeSupported && window.MediaRecorder.isTypeSupported(types[j])){ mime = types[j]; break; }
+    try{ r = new window.MediaRecorder(cv.captureStream(fps), mime ? { mimeType:mime, videoBitsPerSecond:8000000 } : undefined); }
+    catch(e){ Snd.err(); toast("This browser blocked the recorder — try the animated SVG", true); return; }
+    r.ondataavailable = function(e){ if(e.data && e.data.size) chunks.push(e.data); };
+    r.onstop = function(){
+      saveBlob(new Blob(chunks, { type:mime || "video/webm" }), fileName("webm"));
+      Snd.shutter(); sparkle(4); toast("Saved a " + (MAIN_N*2) + " frame video");
+    };
+    var f = 0, total = MAIN_N * 2;
+    r.start();
+    (function step(){
+      ctx.clearRect(0, 0, S, S); ctx.drawImage(imgs[f % MAIN_N], 0, 0, S, S); f++;
+      if(f <= total) setTimeout(step, 1000/fps); else setTimeout(function(){ try{ r.stop(); }catch(e){} }, 200);
+    })();
+  }
+  for(i = 0; i < MAIN_N; i++) (function(i){
+    var img = new Image();
+    img.onload = function(){ if(++done === MAIN_N && !bad) record(); };
+    img.onerror = function(){ if(!bad){ bad = true; Snd.err(); toast("Couldn't draw those frames", true); } };
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(mainFrame(i).replace("<svg ", '<svg width="'+S+'" height="'+S+'" '));
+    imgs[i] = img;
+  })(i);
 }
 
 /* ---------- the shelf ---------- */
@@ -5238,6 +5360,9 @@ function init(){
   $("redoBtn").addEventListener("click", redo);
   $("pngBtn").addEventListener("click", savePNG);
   $("svgBtn").addEventListener("click", saveSVG);
+  $("animSvgBtn").addEventListener("click", saveMainSVG);
+  $("vidBtn").addEventListener("click", saveMainVideo);
+  buildEyeUI();
   $("clipBtn").addEventListener("click", copyImage);
   $("shelfAddBtn").addEventListener("click", addToShelf);
   $("linkBtn").addEventListener("click", shareLink);
