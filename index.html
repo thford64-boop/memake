@@ -2685,7 +2685,7 @@ function charArt(ch, sc, uid, fallback){
     out += '<ellipse cx="'+N1(toWorld(R.hip,F).x)+'" cy="'+N1(low)+'" rx="'+N1(76*K)+'" ry="'+N1(15*K)+'" fill="'+LINE+'" opacity="0.13"/>';
   }
   return out + '<g data-cid="'+ch.id+'">'
-    + atScale(F.ox, F.oy, F.a, K, figureArt(st, ch, R, uid, { face:ch.face }))
+    + atScale(F.ox, F.oy, F.a, K, twWith(ch.tw, function(){ return figureArt(st, ch, R, uid, { face:ch.face }); }))
     + '</g>';
 }
 /* ---------- the whole studio picture ---------- */
@@ -2835,6 +2835,15 @@ function cleanBody(raw, fb){
   if(raw) for(j in b) if(typeof raw[j] === "number") b[j] = safeNum(raw[j], b[j], 0.2, 2.4);
   return b;
 }
+/* ===== per-character face tweaks: ranges + defaults, shared by the maker, studio keys and shelf ===== */
+var TW_SK = { fw:[.7,1.4,1], fh:[.75,1.3,1], hs:[.7,1.3,1], tilt:[-15,15,0], es:[.6,1.6,1], ey:[-14,14,0], bw:[-14,14,0], ns:[.5,1.8,1], ny:[-10,10,0], ms:[.5,1.7,1], my:[-10,12,0] };
+var TWA = null;
+function twPick(src){ var o = {}, k, v; for(k in TW_SK){ v = src && src[k]; o[k] = (typeof v === "number" && isFinite(v)) ? clamp(v, TW_SK[k][0], TW_SK[k][1]) : TW_SK[k][2]; } return o; }
+function twIsDef(o){ for(var k in TW_SK) if(o[k] !== TW_SK[k][2]) return false; return true; }
+function twWith(t, fn){ var prev = TWA; if(t) TWA = t; try{ return fn(); } finally { TWA = prev; } }
+function twLerp(a, b, f){ var o = {}, k; for(k in TW_SK) o[k] = lerp(a[k], b[k], f); return o; }
+function twSnap(){ var q = twPick(TW); return twIsDef(q) ? undefined : q; }
+function twApply(t){ var q = twPick(t), k; for(k in TW_SK) TW[k] = q[k]; twSave(); try{ twSync(); }catch(e){} }
 function cleanChar(raw, id){
   var ch = defaultChar(id);
   if(!raw || typeof raw !== "object") return ch;
@@ -2852,6 +2861,7 @@ function cleanChar(raw, id){
     ch.outfit.shoeC = safeCol(raw.outfit.shoeC, ch.outfit.shoeC);
   }
   ch.face = cleanFace(raw.face);
+  if(raw.tw && typeof raw.tw === "object") ch.tw = twPick(raw.tw);
   return ch;
 }
 function cleanAnim(raw, cast, objs){
@@ -2870,6 +2880,7 @@ function cleanAnim(raw, cast, objs){
         body: cleanBody(from && from.body, cast[j].body),
         face: cleanFace(from && from.face)
       };
+      if(from && from.tw && typeof from.tw === "object") k.cast[cid].tw = twPick(from.tw);
     }
     if(src.objs) for(j=0;j<objs.length;j++){
       o = src.objs[objs[j].id];
@@ -3690,7 +3701,7 @@ function stCopyImage(){
 }
 function stShelfAdd(){
   var nm = charName.trim() || ("Pose " + (shelf.length + 1));
-  shelf.unshift({ code: encodeState(state), name: nm, at: Date.now(), studio: JSON.parse(JSON.stringify(scene)) });
+  shelf.unshift({ code: encodeState(state), name: nm, at: Date.now(), tw: twSnap(), studio: JSON.parse(JSON.stringify(scene)) });
   if(shelf.length > 60) shelf.length = 60;
   saveShelf(); renderShelf();
   Snd.chime(); sparkle(3);
@@ -3990,6 +4001,7 @@ function animCapture(t){
     if(ch !== curChar()) continue;      /* a key holds the selected character only */
     st = charState(ch, state);
     k.cast[ch.id] = {
+      tw: twPick(ch.tw || TW),
       pose: clonePose(ch.pose),
       body: { hs:ch.body.hs, thick:ch.body.thick, legs:ch.body.legs, tall:ch.body.tall },
       face: { px:ch.face.px, py:ch.face.py, blink:ch.face.blink, open:ch.face.open,
@@ -4027,6 +4039,7 @@ function animStateAt(t, an){
     c.face.open = bb ? lerp(a.face.open, bb.face.open, f) : a.face.open;
     /* expressions swap over on the key, they don't melt into each other */
     c.face.eyes = a.face.eyes; c.face.mouth = a.face.mouth; c.face.brows = a.face.brows;
+    if(a.tw || (bb && bb.tw)){ var ta = a.tw || twPick(null), tb = (bb && bb.tw) || ta; c.tw = twLerp(ta, tb, f); }
     out.cast[cid] = c;
   }
   for(j in k0.objs){
@@ -4041,7 +4054,7 @@ function animSceneAt(s){
   for(i=0;i<scene.cast.length;i++){
     var ch = scene.cast[i], cm = s.cast[ch.id], cn = {};
     for(kk in ch) cn[kk] = ch[kk];
-    if(cm){ cn.pose = cm.pose; cn.body = cm.body; cn.face = cm.face; }
+    if(cm){ cn.pose = cm.pose; cn.body = cm.body; cn.face = cm.face; if(cm.tw) cn.tw = cm.tw; }
     sc.cast.push(cn);
   }
   for(i=0;i<scene.objs.length;i++){
@@ -5134,7 +5147,7 @@ function renderShelf(){
     card = document.createElement("div");
     card.style.position = "relative";
     card.innerHTML = '<button type="button" class="card" data-load="'+i+'" title="Load this one">'
-      + (it.studio ? studioMarkup(st, cleanScene(it.studio), "shs"+i, {}) : svgMarkup(st, "sh"+i, "0 0 400 400", {}))
+      + twWith(it.tw || twPick(null), function(){ return it.studio ? studioMarkup(st, cleanScene(it.studio), "shs"+i, {}) : svgMarkup(st, "sh"+i, "0 0 400 400", {}); })
       + '<span class="nm">'+esc(it.name || "Unnamed")+'</span></button>'
       + '<button type="button" class="x" data-del="'+i+'" aria-label="Remove '+esc(it.name||"this one")+'">&#10005;</button>';
     box.appendChild(card);
@@ -5142,7 +5155,7 @@ function renderShelf(){
 }
 function addToShelf(){
   var nm = charName.trim() || ("Number " + (shelf.length + 1));
-  shelf.unshift({ code: encodeState(state), name: nm, at: Date.now() });
+  shelf.unshift({ code: encodeState(state), name: nm, at: Date.now(), tw: twSnap() });
   if(shelf.length > 60) shelf.length = 60;
   saveShelf(); renderShelf();
   Snd.chime(); sparkle(3);
@@ -5153,6 +5166,7 @@ function loadFromShelf(i){
   var st = decodeState(it.code);
   if(!st){ Snd.err(); toast("That one wouldn't load", true); return; }
   delete st.fuzzy;
+  twApply(it.tw);
   state = st; charName = it.name || "";
   $("nameInput").value = charName; $("stName").value = charName;
   pushHistory();
@@ -5183,7 +5197,8 @@ function importShelf(file){
     for(i=0;i<items.length;i++){
       if(items[i] && items[i].code && decodeState(items[i].code)){
         shelf.unshift({ code:items[i].code, name:items[i].name || "Unnamed", at:items[i].at || Date.now(),
-                        studio: items[i].studio ? cleanScene(items[i].studio) : undefined });
+                        studio: items[i].studio ? cleanScene(items[i].studio) : undefined,
+                        tw: items[i].tw ? twPick(items[i].tw) : undefined });
         added++;
       }
     }
@@ -5558,16 +5573,17 @@ function twSave(){ try{ localStorage.setItem("memake.tw", JSON.stringify(TW)); }
 function twG(t, a){ return t ? '<g transform="' + t + '">' + a + '</g>' : a; }
 function twAbout(x, y, sc, dy){ return "translate(0," + dy + ") translate(" + x + "," + y + ") scale(" + sc + ") translate(" + -x + "," + -y + ")"; }
 function MMX(k, a){
-  var t = "";
-  if(k === "eye" && (TW.es !== 1 || TW.ey)) t = twAbout(200, 174, TW.es, TW.ey);
-  else if(k === "brow" && TW.bw) t = "translate(0," + TW.bw + ")";
-  else if(k === "nose" && (TW.ns !== 1 || TW.ny)) t = twAbout(200, 195, TW.ns, TW.ny);
-  else if(k === "mouth" && (TW.ms !== 1 || TW.my)) t = twAbout(200, 213, TW.ms, TW.my);
+  var T = TWA || TW, t = "";
+  if(k === "eye" && (T.es !== 1 || T.ey)) t = twAbout(200, 174, T.es, T.ey);
+  else if(k === "brow" && T.bw) t = "translate(0," + T.bw + ")";
+  else if(k === "nose" && (T.ns !== 1 || T.ny)) t = twAbout(200, 195, T.ns, T.ny);
+  else if(k === "mouth" && (T.ms !== 1 || T.my)) t = twAbout(200, 213, T.ms, T.my);
   return twG(t, a);
 }
 function MMH(a){
-  if(TW.fw === 1 && TW.fh === 1 && TW.hs === 1 && !TW.tilt) return a;
-  return twG("translate(200,250) rotate(" + TW.tilt + ") scale(" + (TW.fw * TW.hs).toFixed(3) + "," + (TW.fh * TW.hs).toFixed(3) + ") translate(-200,-250)", a);
+  var T = TWA || TW;
+  if(T.fw === 1 && T.fh === 1 && T.hs === 1 && !T.tilt) return a;
+  return twG("translate(200,250) rotate(" + T.tilt + ") scale(" + (T.fw * T.hs).toFixed(3) + "," + (T.fh * T.hs).toFixed(3) + ") translate(-200,-250)", a);
 }
 function twView(){
   var z = TW.zoom, sz = 400 / z, cy = 200 - 40 * Math.min(1, Math.max(0, (z - 1) / 0.85));
@@ -5622,6 +5638,10 @@ var TW_UI = [
 ];
 var TW_SHAPE = "fw fh hs tilt es ey bw ns ny ms my", TW_CAM = "zoom px py";
 
+function twRead(k){ return TW_SK[k] ? ((inStudio() && curChar().tw) || TW)[k] : TW[k]; }
+function twSet(k, v){
+  if(TW_SK[k] && inStudio()){ var ch = curChar(); if(!ch.tw) ch.tw = twPick(TW); ch.tw[k] = v; } else TW[k] = v;
+}
 function twAnim(){
   var st = $("stage"); if(!st) return;
   st.style.setProperty("--mm-bt", (3.6 / TW.spd).toFixed(2) + "s");
@@ -5638,7 +5658,7 @@ function twRedraw(cam){
 function twSync(){
   var els = document.querySelectorAll("#mmx [data-k]"), i, k, v;
   for(i = 0; i < els.length; i++){
-    k = els[i].dataset.k; v = TW[k]; els[i].value = v;
+    k = els[i].dataset.k; v = twRead(k); els[i].value = v;
     els[i].parentNode.querySelector("output").textContent = Math.round(v * 100) / 100;
   }
   $("mmxSty").value = TW.mstyle;
@@ -5662,7 +5682,7 @@ function twInit(){
   h += '<h3>Background music</h3><div class="row"><button class="btn btn-sm btn-mint" id="mmxMus">Play</button><select id="mmxSty" aria-label="Music style"><option value="chill">Chill lo-fi</option><option value="sparkle">Sparkle chip</option><option value="dream">Dreamy pads</option></select></div>';
   h += '<label>Volume<input type="range" data-k="mvol" min="0" max="1" step="0.01"><output></output></label>';
   h += '<div class="row"><button class="btn btn-sm btn-coral" id="mmxRnd">Random face shape</button><button class="btn btn-sm" id="mmxRst">Reset tweaks</button></div>';
-  h += '<p class="hint">Scroll over the picture to zoom. Press <kbd>T</kbd> for this panel, <kbd>P</kbd> for music.</p>';
+  h += '<p class="hint">Scroll over the picture to zoom. Press <kbd>T</kbd> for this panel, <kbd>P</kbd> for music. In Studio the face sliders belong to the selected character and are saved into every animation key you add or update.</p>';
   p.innerHTML = h;
   document.body.appendChild(fab); document.body.appendChild(p);
   var mb = document.createElement("button");
@@ -5674,22 +5694,28 @@ function twInit(){
   $("mmxSty").addEventListener("change", function(){ TW.mstyle = this.value; MUS.restart(); twSave(); });
   p.addEventListener("input", function(e){
     var k = e.target.dataset && e.target.dataset.k; if(!k) return;
-    TW[k] = +e.target.value;
-    e.target.parentNode.querySelector("output").textContent = Math.round(TW[k] * 100) / 100;
+    twSet(k, +e.target.value);
+    e.target.parentNode.querySelector("output").textContent = Math.round(twRead(k) * 100) / 100;
     if((" " + TW_SHAPE + " ").indexOf(" " + k + " ") >= 0) twRedraw(false);
     else if((" " + TW_CAM + " ").indexOf(" " + k + " ") >= 0) twRedraw(true);
     else if(k === "mvol") MUS.vol(TW.mvol);
     else twAnim();
     twSave();
   });
+  p.addEventListener("change", function(e){
+    var k = e.target.dataset && e.target.dataset.k;
+    if(k && TW_SK[k] && inStudio()){ try{ stPush(); }catch(err){} }
+  });
   $("mmxRnd").addEventListener("click", function(){
     function r(a, b){ return Math.round((a + Math.random() * (b - a)) * 100) / 100; }
-    TW.fw = r(.8, 1.3); TW.fh = r(.85, 1.2); TW.hs = r(.9, 1.15); TW.tilt = r(-6, 6);
-    TW.es = r(.8, 1.4); TW.ey = r(-6, 6); TW.bw = r(-6, 6); TW.ns = r(.8, 1.4); TW.ny = r(-4, 4); TW.ms = r(.8, 1.4); TW.my = r(-4, 5);
+    var R = { fw:r(.8,1.3), fh:r(.85,1.2), hs:r(.9,1.15), tilt:r(-6,6), es:r(.8,1.4), ey:r(-6,6), bw:r(-6,6), ns:r(.8,1.4), ny:r(-4,4), ms:r(.8,1.4), my:r(-4,5) };
+    for(var q in R) twSet(q, R[q]);
+    if(inStudio()){ try{ stPush(); }catch(err){} }
     twSync(); twRedraw(false); twSave(); Snd.pop();
   });
   $("mmxRst").addEventListener("click", function(){
-    for(var k in TW_DEF) if(k !== "mus" && k !== "mstyle" && k !== "mvol") TW[k] = TW_DEF[k];
+    if(inStudio()){ curChar().tw = twPick(null); try{ stPush(); }catch(err){} }
+    else for(var k in TW_DEF) if(k !== "mus" && k !== "mstyle" && k !== "mvol") TW[k] = TW_DEF[k];
     twSync(); twAnim(); twRedraw(true); twSave(); toast("Tweaks reset");
   });
   $("zoomSeg").addEventListener("click", function(){
@@ -5710,6 +5736,8 @@ function twInit(){
     document.addEventListener("pointerdown", go); document.addEventListener("keydown", go);
   }
   if(cfg.zoom === "custom") segSet("zoomSeg", "zoom", "custom");
+  var lastSel = "";
+  setInterval(function(){ var id = inStudio() ? "s" + curChar().id : "m"; if(id !== lastSel){ lastSel = id; twSync(); } }, 300);
   twSync(); twAnim();
 }
 if(typeof document !== "undefined"){
