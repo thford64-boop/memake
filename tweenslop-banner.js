@@ -1,55 +1,48 @@
 (() => {
-  "use strict";
+  if (document.getElementById("tweenslop-overlay")) return;
 
-  if (document.getElementById("tweenslop-banner")) return;
+  const style = document.createElement("style");
+  style.textContent = `
+    #tweenslop-overlay {
+      position: fixed !important;
+      left: 20px !important;
+      bottom: 20px !important;
+      z-index: 2147483647 !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      background: #3fd6a4 !important;
+      color: #2b2145 !important;
+      border: 3px solid #2b2145 !important;
+      border-radius: 999px !important;
+      padding: 12px 20px !important;
+      font-family: "Fredoka", "Trebuchet MS", sans-serif !important;
+      font-size: 15px !important;
+      font-weight: 700 !important;
+      text-decoration: none !important;
+      box-shadow: 0 5px 0 #2b2145 !important;
+      cursor: pointer !important;
+      transform: none;
+    }
 
-  const link = document.createElement("a");
-  link.id = "tweenslop-banner";
-  link.className = "btn btn-mint";
-  link.href = "https://tweenslop.pages.dev";
-  link.textContent = "CHECK OUT TWEENSLOP";
-  link.target = "_blank";
-  link.rel = "noopener noreferrer";
+    #tweenslop-overlay:hover {
+      transform: translateY(-2px) !important;
+    }
 
-  link.setAttribute(
-    "aria-label",
-    "Check out TweenSlop (opens in a new tab)"
-  );
+    #tweenslop-overlay:active {
+      transform: translateY(4px) !important;
+      box-shadow: 0 0 0 #2b2145 !important;
+    }
+  `;
+  document.head.appendChild(style);
 
-  Object.assign(link.style, {
-    position: "fixed",
-    left: "16px",
-    bottom: "16px",
-    zIndex: "9999",
-    display: "inline-block",
-    textDecoration: "none",
-    whiteSpace: "nowrap",
-    fontFamily: '"Fredoka", "Trebuchet MS", "Segoe UI", system-ui, sans-serif',
-    border: "3px solid var(--ink, #2b2145)",
-    borderRadius: "999px",
-    padding: "10px 18px",
-    fontSize: "15px",
-    fontWeight: "600",
-    lineHeight: "normal",
-    background: "var(--mint, #3fd6a4)",
-    color: "#2b2145",
-    boxShadow: "0 4px 0 var(--ink, #2b2145)",
-    transition: "transform .08s ease, box-shadow .08s ease"
-  });
+  const button = document.createElement("a");
+  button.id = "tweenslop-overlay";
+  button.href = "https://tweenslop.pages.dev/";
+  button.target = "_blank";
+  button.rel = "noopener noreferrer";
+  button.textContent = "🚀 CHECK OUT TWEENSLOP";
 
-  link.addEventListener("pointerdown", () => {
-    link.style.transform = "translateY(4px)";
-    link.style.boxShadow = "0 0 0 var(--ink, #2b2145)";
-  });
-
-  const release = () => {
-    link.style.transform = "";
-    link.style.boxShadow = "";
-  };
-
-  link.addEventListener("pointerup", release);
-  link.addEventListener("pointerleave", release);
-  link.addEventListener("blur", release);
-
-  document.body.appendChild(link);
+  document.body.appendChild(button);
 })();
