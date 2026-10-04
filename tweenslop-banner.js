@@ -5,30 +5,44 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Set the text and the destination link
     banner.innerText = "Check out TWEENSLOP";
-    banner.href = "https://pages.dev";
+    banner.href = "https://tweenslop.pages.dev";
     banner.target = "_blank"; // Opens in a new tab
     
-    // Style the banner to sit in the bottom-right corner
+    // Style the banner to match your website's custom theme variables
     Object.assign(banner.style, {
         position: "fixed",
         bottom: "20px",
-        right: "20px",
-        backgroundColor: "#000000", // Black background
-        color: "#ffffff",           // White text
-        padding: "10px 15px",
-        borderRadius: "5px",
-        fontFamily: "Arial, sans-serif",
-        fontSize: "14px",
-        fontWeight: "bold",
+        left: "20px",
+        backgroundColor: "var(--ink)",
+        color: "var(--paper)",
+        padding: "9px 20px 11px",
+        borderRadius: "16px",
+        fontFamily: '"Fredoka", "Trebuchet MS", sans-serif',
+        fontSize: "15px",
+        fontWeight: "700",
         textDecoration: "none",
-        boxShadow: "0px 4px 6px rgba(0,0,0,0.1)",
-        zIndex: "10000",            // Ensures it stays on top of other elements
-        cursor: "pointer"
+        border: "3px solid var(--ink)",
+        boxShadow: "4px 4px 0px var(--mint)",
+        zIndex: "10000", // Keeps it on top of other content
+        cursor: "pointer",
+        transition: "transform 0.08s ease, box-shadow 0.08s ease"
     });
 
-    // Add a simple hover effect
-    banner.addEventListener("mouseenter", () => banner.style.opacity = "0.9");
-    banner.addEventListener("mouseleave", () => banner.style.opacity = "1");
+    // Add a fun hover click animation matching your existing theme buttons
+    banner.addEventListener("mousedown", () => {
+        banner.style.transform = "translate(4px, 4px)";
+        banner.style.boxShadow = "0px 0px 0px var(--ink)";
+    });
+    
+    banner.addEventListener("mouseup", () => {
+        banner.style.transform = "none";
+        banner.style.boxShadow = "4px 4px 0px var(--mint)";
+    });
+
+    banner.addEventListener("mouseleave", () => {
+        banner.style.transform = "none";
+        banner.style.boxShadow = "4px 4px 0px var(--mint)";
+    });
 
     // Inject the banner into the website body
     document.body.appendChild(banner);
