@@ -1,49 +1,55 @@
-// Wait until the website's HTML is fully loaded
-document.addEventListener("DOMContentLoaded", function() {
-    // Create the anchor (link) element
-    const banner = document.createElement("a");
-    
-    // Set the text and the destination link
-    banner.innerText = "Check out TWEENSLOP";
-    banner.href = "https://tweenslop.pages.dev";
-    banner.target = "_blank"; // Opens in a new tab
-    
-    // Style the banner to match your website's custom theme variables
-    Object.assign(banner.style, {
-        position: "fixed",
-        bottom: "20px",
-        left: "20px",
-        backgroundColor: "var(--ink)",
-        color: "var(--paper)",
-        padding: "9px 20px 11px",
-        borderRadius: "16px",
-        fontFamily: '"Fredoka", "Trebuchet MS", sans-serif',
-        fontSize: "15px",
-        fontWeight: "700",
-        textDecoration: "none",
-        border: "3px solid var(--ink)",
-        boxShadow: "4px 4px 0px var(--mint)",
-        zIndex: "10000", // Keeps it on top of other content
-        cursor: "pointer",
-        transition: "transform 0.08s ease, box-shadow 0.08s ease"
-    });
+(() => {
+  "use strict";
 
-    // Add a fun hover click animation matching your existing theme buttons
-    banner.addEventListener("mousedown", () => {
-        banner.style.transform = "translate(4px, 4px)";
-        banner.style.boxShadow = "0px 0px 0px var(--ink)";
-    });
-    
-    banner.addEventListener("mouseup", () => {
-        banner.style.transform = "none";
-        banner.style.boxShadow = "4px 4px 0px var(--mint)";
-    });
+  if (document.getElementById("tweenslop-banner")) return;
 
-    banner.addEventListener("mouseleave", () => {
-        banner.style.transform = "none";
-        banner.style.boxShadow = "4px 4px 0px var(--mint)";
-    });
+  const link = document.createElement("a");
+  link.id = "tweenslop-banner";
+  link.className = "btn btn-mint";
+  link.href = "https://tweenslop.pages.dev";
+  link.textContent = "CHECK OUT TWEENSLOP";
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
 
-    // Inject the banner into the website body
-    document.body.appendChild(banner);
-});
+  link.setAttribute(
+    "aria-label",
+    "Check out TweenSlop (opens in a new tab)"
+  );
+
+  Object.assign(link.style, {
+    position: "fixed",
+    left: "16px",
+    bottom: "16px",
+    zIndex: "9999",
+    display: "inline-block",
+    textDecoration: "none",
+    whiteSpace: "nowrap",
+    fontFamily: '"Fredoka", "Trebuchet MS", "Segoe UI", system-ui, sans-serif',
+    border: "3px solid var(--ink, #2b2145)",
+    borderRadius: "999px",
+    padding: "10px 18px",
+    fontSize: "15px",
+    fontWeight: "600",
+    lineHeight: "normal",
+    background: "var(--mint, #3fd6a4)",
+    color: "#2b2145",
+    boxShadow: "0 4px 0 var(--ink, #2b2145)",
+    transition: "transform .08s ease, box-shadow .08s ease"
+  });
+
+  link.addEventListener("pointerdown", () => {
+    link.style.transform = "translateY(4px)";
+    link.style.boxShadow = "0 0 0 var(--ink, #2b2145)";
+  });
+
+  const release = () => {
+    link.style.transform = "";
+    link.style.boxShadow = "";
+  };
+
+  link.addEventListener("pointerup", release);
+  link.addEventListener("pointerleave", release);
+  link.addEventListener("blur", release);
+
+  document.body.appendChild(link);
+})();
